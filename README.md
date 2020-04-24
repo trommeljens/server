@@ -1,3 +1,28 @@
+# ANNOUNCEMENT
+
+Hey,
+
+we are currently reorganzing our code during the EU Hackathon #EuVsVirus.
+For this we move code fragments part by part from the former repository at:
+https://github.com/delude88/digitalstage-mediasoup
+
+And we need your Help!
+
+So we add some comments like
+
+    //TODO: Implement this feature here
+    
+as single work packets for the communicty.
+
+We will use this readme for updates in the upcoming week during the hackatlon.
+And join us on the #EuVsVirus channel:
+
+https://euvsvirus.slack.com/archives/C011PTXA9U7
+
+and get in contact :)
+
+Together we fight corona!
+
 # Digital Stage Server Application
 
 This is the web client implementation of the Digital Stage Project, written in Typescript and using mainly
