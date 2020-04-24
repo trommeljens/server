@@ -1,3 +1,16 @@
+# Digital Stage Server Application
+
+This is the web client implementation of the Digital Stage Project, written in Typescript and using mainly
+ - Node.js
+ - Socket.io
+ - Mediasoup
+ - Google Firebase
+ 
+ Please participante and help us developing this solution right now at
+ 
+    #WirVsVirus
+     
+    #EUvsVirus
 
 ## Requirements
 
@@ -21,37 +34,12 @@ For more information please see: https://mediasoup.org/documentation/v3/mediasou
 
 To get started, checkout the repository and install all dependencies first:
 
-    git clone https://github.com/delude88/digitalstage-mediasoup.git
-    cd digitalstage-mediasoup
-    cd client
-    npm install
-    cd ..
+    git clone https://github.com/digita-stage/server.git
     cd server
     npm install
     
 Then you can start the server by using
 
-    cd server
     npm dev
     
-Go ahead and open another terminal and start the client's webserver by
-
-    cd client
-    npm dev
-
-Then open a modern browser (we recommend Google Chrome) and open
-
-    http://localhost:3000/
-
-### Google Chrome hints
-Google Chrome will restrict the connection to the server, since we are using self-signed SSL certificates, so enable the usage of insecure localhost,
-by opening the following link inside Google Chrome and enable the flag "allow insecure localhost":
-
-    chrome://flags/#allow-insecure-localhost
-    
-### Firefox hints
-If you are using e.g. Firefox instead, navigate to the following page:
-
-    https://localhost:3001
-    
-Then a warning page should appear. Continue by accepting the insecure certificate. This will create an exception for localhost:3001 and thus the client application should work.
+The server is then running on port 3001    
