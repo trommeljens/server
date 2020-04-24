@@ -1,0 +1,10 @@
+.idea
+.now
+.next
+.DS_Store
+dist
+node_modules
+package-lock.json
+env.ts
+firebase-adminsdk.json
+ecosystem.config.js
