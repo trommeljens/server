@@ -24,7 +24,7 @@ module.exports = {
       ref  : 'origin/feat/di-application',
       repo : "git@github.com:digital-stage/server.git",
       path : '/node/digitalstage',
-      'post-deploy' : 'npm install && npm run build-ts && pm2 reload ecosystem.config.js --env production'
+      'post-deploy' : 'npm install && npm run build && pm2 reload ecosystem.config.js --env production'
     }
   }
 };
