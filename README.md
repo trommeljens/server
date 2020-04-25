@@ -68,3 +68,36 @@ Then you can start the server by using
     npm dev
     
 The server is then running on port 3001    
+
+
+# Socket events
+_(s=server, c=client, *=all stage clients, c>s>c=request)_
+
+## Stage - `stg/*`
+* s>* `stg/client-added`
+* c>s `stg/create`
+* c>s `stg/join`
+
+## Connections - `con/*`
+### WebRTC - `con/p2p/*`
+* s>* `con/p2p/peer-added`
+* c>s `con/p2p/make-offer`
+* s>c `con/p2p/offer-made`
+* c>s `con/p2p/make-answer`
+* s>c `con/p2p/answer-made`
+* c>s `con/p2p/send-candidate`
+* s>c `con/p2p/candidate-sent`
+
+### Soundjack - `con/sj/*`
+* c>s `con/sj/send-ip`
+* s>c `con/sj/ip-sent`
+
+### Mediasoup - `con/ms/*`
+* c>s>c `con/ms/get-rtp-capabilities`
+* c>s>c `con/ms/create-send-transport`
+* c>s>c `con/ms/create-send-transport`
+* c>s>c `con/ms/create-receive-transport`
+* c>s>c `con/ms/connect-transport`
+* c>s>c `con/ms/send-track`
+* c>s>c `con/ms/consume`
+* c>s>c `con/ms/finish-consume`
