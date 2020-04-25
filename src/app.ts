@@ -8,6 +8,7 @@ import {
     WebRTC,
     Soundjack,
     SocketHandler,
+    StageManager,
 } from './modules';
 import { Stage } from './modules/socket-handlers/stage';
 
@@ -19,7 +20,7 @@ import { Stage } from './modules/socket-handlers/stage';
         Soundjack,
         SocketHandler,
         HttpServer,
-        Stage,
+        StageManager,
     ],
 })
 export class App implements OnReady {
