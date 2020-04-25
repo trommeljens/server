@@ -1,5 +1,17 @@
 import { Injectable, OnInit } from "@hacker-und-koch/di";
 import { Logger } from "@hacker-und-koch/logger";
+import { Events } from "./events";
+
+export interface ClientIpPayload {
+    ip: string;
+    port: number;
+}
+
+export interface ServerIpPayload {
+    uid: string;
+    ip: string;
+    port: number;
+}
 
 @Injectable()
 export class Soundjack {
@@ -8,16 +20,13 @@ export class Soundjack {
 
     // former initializeSingleSocket
     public async connectSocketToStage(socket: SocketIO.Socket, stage: string, uid: string) {
-        socket.on("con/sj/send-ip", (data: {
-            ip: string;
-            port: number;
-        }) => {
-            this.logger.spam(`received sj/send-ip on stage ${stage}. will emit sj/ip-sent.`);
-            socket.emit("con/sj/ip-sent", {
+        socket.on(Events.stage.soundjack.sendIp, (data: ClientIpPayload) => {
+            this.logger.spam(`received ${Events.stage.soundjack.sendIp} on stage ${stage}. will emit ${Events.stage.soundjack.ipSent}.`);
+            socket.emit(Events.stage.soundjack.ipSent, {
                 uid: uid,
                 ip: data.ip,
                 port: data.port
-            });
+            } as ServerIpPayload);
         });
     };
 };

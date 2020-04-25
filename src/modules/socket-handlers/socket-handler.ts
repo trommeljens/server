@@ -1,42 +1,26 @@
-import { Injectable, OnInit, OnDestroy } from "@hacker-und-koch/di";
+import { Injectable } from "@hacker-und-koch/di";
 import { Logger } from "@hacker-und-koch/logger";
-import { Socket } from "socket.io";
-import { Stage } from "./stage";
-
-export interface BroadcastEvent {
-    action: string;
-    issuer: Socket;
-}
+import { Stage, StageCreatePayload, StageJoinPayload } from "./stage";
+import { Events } from './events';
 
 @Injectable()
 export class SocketHandler {
     constructor(
-
         private logger: Logger,
         private stage: Stage,
-    ) {
-
-    }
+    ) { }
 
     async handle(socket: SocketIO.Socket) {
-        console.log("Got new socket connection " + socket.id + " from " + socket.handshake.address);
+        this.logger.log(`Got new socket connection ${socket.id} from ${socket.handshake.address}`);
 
-
-        socket.on("stg/create", async (data: {
-            token: string;
-            stageName: string;
-            type: "theater" | "music" | "conference";
-            password: string | null;
-        }, callback) => {
-            this.stage.handleStageCreate(socket, data, callback)
+        socket.on(Events.stage.create, async (data: StageCreatePayload, callback) => {
+            const docRefId = await this.stage.handleStageCreate(socket, data);
+            callback(docRefId);
         });
 
-        socket.on("stg/join", async (data: {
-            token: string;
-            stageId: string;
-            password: string | null;
-        }, callback) => {
-            this.stage.handleStageJoin(socket, data, callback);
+        socket.on(Events.stage.join, async (data: StageJoinPayload, callback) => {
+            const response = await this.stage.handleStageJoin(socket, data);
+            callback(response);
         });
     }
 

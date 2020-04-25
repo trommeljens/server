@@ -69,15 +69,15 @@ export class Mediasoup implements OnInit {
         stage.clients.push(client);
 
 
-        socket.on("con/ms/get-rtp-capabilities", async ({}, callback) => {
-            console.log(socket.id + ": con/ms/get-rtp-capabilities");
+        socket.on("stg/ms/get-rtp-capabilities", async ({}, callback) => {
+            console.log(socket.id + ": stg/ms/get-rtp-capabilities");
             console.log(stage.router.rtpCapabilities);
             callback(stage.router.rtpCapabilities);
         });
 
         /*** CREATE SEND TRANSPORT ***/
-        socket.on("con/ms/create-send-transport", async (data: {}, callback) => {
-            console.log(socket.id + ": con/ms/create-send-transport");
+        socket.on("stg/ms/create-send-transport", async (data: {}, callback) => {
+            console.log(socket.id + ": stg/ms/create-send-transport");
             try {
                 const transport: WebRtcTransport = await stage.router.createWebRtcTransport({
                     listenIps: config.mediasoup.webRtcTransport.listenIps,
@@ -102,10 +102,10 @@ export class Mediasoup implements OnInit {
         });
 
         /*** CREATE RECEIVE TRANSPORT ***/
-        socket.on("con/ms/create-receive-transport", async (data: {
+        socket.on("stg/ms/create-receive-transport", async (data: {
             rtpCapabilities: RtpCapabilities;
         }, callback) => {
-            console.log(socket.id + ": con/ms/create-receive-transport");
+            console.log(socket.id + ": stg/ms/create-receive-transport");
             const transport: WebRtcTransport = await stage.router.createWebRtcTransport({
                 listenIps: config.mediasoup.webRtcTransport.listenIps,
                 enableUdp: true,
@@ -123,11 +123,11 @@ export class Mediasoup implements OnInit {
         });
 
         /*** CONNECT TRANSPORT ***/
-        socket.on("con/ms/connect-transport", async (data: {
+        socket.on("stg/ms/connect-transport", async (data: {
             transportId: string;
             dtlsParameters: DtlsParameters;
         }, callback) => {
-            console.log(socket.id + ": con/ms/connect-transport " + data.transportId);
+            console.log(socket.id + ": stg/ms/connect-transport " + data.transportId);
             const transport: WebRtcTransport = transports[data.transportId];
             if (!transport) {
                 callback({error: "Could not find transport " + data.transportId});
@@ -137,13 +137,14 @@ export class Mediasoup implements OnInit {
             /*** ANSWER BY SENDING EXISTING MEMBERS AND DIRECTOR ***/
             callback({connected: true});
         });
+
         /*** SEND TRACK ***/
-        socket.on("con/ms/send-track", async (data: {
+        socket.on("stg/ms/send-track", async (data: {
             transportId: string;
             rtpParameters: RtpParameters;
             kind: MediaKind;
         }, callback) => {
-            console.log(socket.id + ": con/ms/send-track");
+            console.log(socket.id + ": stg/ms/send-track");
             const transport: WebRtcTransport = client.transports[data.transportId];
             if (!transport) {
                 callback({error: "Could not find transport " + data.transportId});
@@ -167,7 +168,7 @@ export class Mediasoup implements OnInit {
         });
 
         /*** CONSUME (paused track) ***/
-        socket.on("con/ms/consume", async (data: {
+        socket.on("stg/ms/consume", async (data: {
             producerId: string;
             transportId: string;
             rtpCapabilities: RtpCapabilities;
@@ -195,7 +196,7 @@ export class Mediasoup implements OnInit {
         });
 
         /*** FINISH CONSUME (resume track after successful consume establishment) ***/
-        socket.on("con/ms/finish-consume", async (data: {
+        socket.on("stg/ms/finish-consume", async (data: {
             uid: string;
             consumerId: string;
         }, callback) => {
