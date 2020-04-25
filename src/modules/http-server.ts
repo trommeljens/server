@@ -1,13 +1,13 @@
 import { Injectable, OnInit, OnConfigure } from "@hacker-und-koch/di";
-import SocketIO from "socket.io";
 import express, { Express } from "express";
+import SocketIO from 'socket.io';
 import cors from "cors";
 import * as https from "https";
 import { Server } from "https";
 import { Logger } from "@hacker-und-koch/logger";
 import * as fs from 'fs';
 
-import { SocketHandler } from "./socket-handler";
+import { SocketHandler, BroadcastEvent } from "./socket-handler";
 
 const timesyncServer = require("timesync/server"); // workaround for ts error
 
@@ -64,5 +64,9 @@ export class HttpServer implements OnConfigure, OnInit {
         this.socketIO = SocketIO(this.webServer);
         this.socketIO.origins("*:*");
         this.socketIO.on("connection", socket => this.socketHandler.handle(socket));
+        this.socketHandler.broadcastEvents
+            .subscribe((event: BroadcastEvent) => {
+                this.socketIO.emit(event.action, event.issuer.id);
+            });
     }
 }

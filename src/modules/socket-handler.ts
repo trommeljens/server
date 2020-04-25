@@ -1,17 +1,33 @@
-import { Injectable, OnInit } from "@hacker-und-koch/di";
+import { Injectable, OnInit, OnDestroy } from "@hacker-und-koch/di";
 import { MediasoupHandler } from "./mediasoup";
 import { WebRTCHandler } from "./web-rtc";
 import { Firebase } from "./firebase";
 import * as firebase from 'firebase-admin';
+import { Socket } from "socket.io";
+
+import { Subject } from 'rxjs';
+
+export interface BroadcastEvent {
+    action: string;
+    issuer: Socket;
+}
 
 @Injectable()
-export class SocketHandler {
+export class SocketHandler implements OnDestroy {
+
+    public broadcastEvents: Subject<BroadcastEvent> = new Subject<BroadcastEvent>();
 
     constructor(
         private mediasoup: MediasoupHandler,
         private webRtc: WebRTCHandler,
         private firebase: Firebase,
-    ) { }
+    ) {
+
+    }
+
+    async onDestroy() {
+        this.broadcastEvents.complete();
+    }
 
     handle(socket: SocketIO.Socket) {
         console.log("Got new socket connection " + socket.id + " from " + socket.handshake.address);
@@ -21,11 +37,11 @@ export class SocketHandler {
             // Add socket event handler for webrtc (p2p-*), mediasoup (ms-*) and soundjack (sj-*)
             this.webRtc.initializeSingleSocket(socket, stageId, user.uid);
             this.mediasoup.initializeSingleSocket(socket, stageId, user.uid);
-            socket.on("sj-send-ip", (data: {
+            socket.on("sj/send-ip", (data: {
                 ip: string;
                 port: number;
             }) => {
-                socket.emit("sj-ip-sent", {
+                socket.emit("sj/ip-sent", {
                     uid: user.uid,
                     ip: data.ip,
                     port: data.port
@@ -108,11 +124,19 @@ export class SocketHandler {
         });
 
         socket.on('connect', () => {
-            // socketServer.emit('add-users', socket.id);
+            // former socketServer.emit('add-users', socket.id);
+            this.broadcastEvents.next({
+                action: 'add-user',
+                issuer: socket,
+            });
         });
 
         socket.on('disconnect', () => {
-            // socketServer.emit('remove-user', socket.id);
+            // former socketServer.emit('remove-user', socket.id);
+            this.broadcastEvents.next({
+                action: 'remove-user',
+                issuer: socket,
+            });
         });
 
         socket.on('make-offer', (data) => {

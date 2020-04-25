@@ -24,7 +24,8 @@
     "express": "^4.17.1",
     "firebase-admin": "^8.11.0",
     "mediasoup": "^3.5.9",
-    "socket.io": "latest",
+    "rxjs": "^6.5.5",
+    "socket.io": "^2.3.0",
     "timesync": "^1.0.5"
   },
   "devDependencies": {
