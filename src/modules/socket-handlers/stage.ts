@@ -1,23 +1,15 @@
-import { Injectable, OnInit, OnDestroy } from "@hacker-und-koch/di";
+import { Injectable, OnInit } from "@hacker-und-koch/di";
 import { Logger } from "@hacker-und-koch/logger";
 import * as firebase from 'firebase-admin';
-import { Subject } from 'rxjs';
-import { Socket } from "socket.io";
 
 import { Mediasoup } from "./mediasoup";
 import { WebRTC } from "./web-rtc";
 import { Soundjack } from "./soundjack";
-import { Firebase } from "./firebase";
-
-export interface BroadcastEvent {
-    action: string;
-    issuer: Socket;
-}
+import { Firebase } from "../firebase";
 
 @Injectable()
-export class SocketHandler implements OnDestroy {
+export class Stage {
 
-    public broadcastEvents: Subject<BroadcastEvent> = new Subject<BroadcastEvent>();
 
     constructor(
         private mediasoup: Mediasoup,
@@ -29,60 +21,13 @@ export class SocketHandler implements OnDestroy {
 
     }
 
-    async onInit() {
-        this.broadcastEvents.subscribe({
-            complete: () => this.logger.info('broadcastEvents completed'),
-        });
-    }
-
-    async onDestroy() {
-        this.broadcastEvents.complete();
-    }
-
-    async handle(socket: SocketIO.Socket) {
-        console.log("Got new socket connection " + socket.id + " from " + socket.handshake.address);
-
-
-
-        socket.on("stg/create", (data: {
-            token: string;
-            stageName: string;
-            type: "theater" | "music" | "conference";
-            password: string | null;
-        }, callback) => {
-            this.handleStageCreate(socket, data, callback)
-        });
-
-        socket.on("stg/join", (data: {
-            token: string;
-            stageId: string;
-            password: string | null;
-        }, callback) => {
-            this.handleStageJoin(socket, data, callback);
-        });
-    }
-
-    private async joinRoomAndInitializeAllServices(socket: SocketIO.Socket, stageId: string, user: firebase.auth.UserRecord) {
-        socket.join(stageId);
-
-        await this.webRtc.connectSocketToStage(socket, stageId, user.uid);
-        await this.mediasoup.connectSocketToStage(socket, stageId, user.uid);
-        await this.soundjack.connectSocketToStage(socket, stageId, user.uid);
-
-        socket.broadcast.to(stageId).emit("stg/client-added", {
-            uid: user.uid,
-            name: user.displayName,
-            socketId: socket.id
-        });
-    };
-
-    private handleStageCreate(socket: SocketIO.Socket, data: {
+    public async handleStageCreate(socket: SocketIO.Socket, data: {
         token: string;
         stageName: string;
         type: "theater" | "music" | "conference";
         password: string | null;
     }, callback: (...args: any[]) => void) {
-        console.log("create-stage()");
+        this.logger.info("create-stage()");
         this.firebase.admin.auth().verifyIdToken(data.token)
             .then((decodedIdToken: firebase.auth.DecodedIdToken) => {
                 //TODO: Add role management by verifying permission to create stage
@@ -101,12 +46,12 @@ export class SocketHandler implements OnDestroy {
             });
     }
 
-    private handleStageJoin(socket: SocketIO.Socket, data: {
+    public async handleStageJoin(socket: SocketIO.Socket, data: {
         token: string;
         stageId: string;
         password: string | null;
     }, callback: (...args: any[]) => void) {
-        console.log("join-stage()");
+        this.logger.info("join-stage()");
         this.firebase.admin.auth()
             .verifyIdToken(data.token)
             .then((decodedIdToken: firebase.auth.DecodedIdToken) => {
@@ -135,4 +80,19 @@ export class SocketHandler implements OnDestroy {
                     });
             });
     }
-}
+
+    public async joinRoomAndInitializeAllServices(socket: SocketIO.Socket, stageId: string, user: firebase.auth.UserRecord) {
+        socket.join(stageId);
+
+        await this.webRtc.connectSocketToStage(socket, stageId, user.uid);
+        await this.mediasoup.connectSocketToStage(socket, stageId, user.uid);
+        await this.soundjack.connectSocketToStage(socket, stageId, user.uid);
+
+        socket.broadcast.to(stageId).emit("stg/client-added", {
+            uid: user.uid,
+            name: user.displayName,
+            socketId: socket.id
+        });
+    };
+
+};

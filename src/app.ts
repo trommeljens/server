@@ -9,6 +9,7 @@ import {
     Soundjack,
     SocketHandler,
 } from './modules';
+import { Stage } from './modules/socket-handlers/stage';
 
 @Application({
     declarations: [
@@ -18,6 +19,7 @@ import {
         Soundjack,
         SocketHandler,
         HttpServer,
+        Stage,
     ],
 })
 export class App implements OnReady {

@@ -10,7 +10,7 @@ import { promisify } from 'util';
 
 const timesyncServer = require("timesync/server"); // workaround for ts error
 
-import { SocketHandler, BroadcastEvent } from "./socket-handler";
+import { SocketHandler, BroadcastEvent } from "./socket-handlers";
 import { Socket as TcpSocket } from "net";
 
 
@@ -72,9 +72,5 @@ export class HttpServer implements OnConfigure, OnInit, OnDestroy {
         this.socketIO = SocketIO(this.webServer);
         this.socketIO.origins("*:*");
         this.socketIO.on("connection", socket => this.socketHandler.handle(socket));
-        this.socketHandler.broadcastEvents
-            .subscribe((event: BroadcastEvent) => {
-                this.socketIO.emit(event.action, event.issuer.id);
-            });
     }
 }

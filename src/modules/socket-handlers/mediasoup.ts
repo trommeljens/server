@@ -12,7 +12,7 @@ import { MediaKind, RtpParameters } from "mediasoup/src/RtpParameters";
 
 const mediasoup = require("mediasoup");
 
-const config = require("./../config");
+const config = require("../../config");
 
 @Injectable()
 export class Mediasoup implements OnInit {
