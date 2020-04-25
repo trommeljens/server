@@ -4,7 +4,7 @@
   "description": "Server for digital stage",
   "main": "dist/server.js",
   "scripts": {
-    "dev": "NODE_ENV=development nodemon --watch './src/**/*.ts' --exec 'ts-node' src/server.ts",
+    "dev": "NODE_ENV=development nodemon --watch './src/**/*.ts' --exec 'ts-node' src/main.ts",
     "build": "NODE_ENV=production npm run build-ts && npm run lint",
     "lint": "tsc --noEmit && eslint \"**/*.{js,ts}\" --quiet --fix",
     "build-ts": "NODE_ENV=production tsc",
@@ -16,6 +16,9 @@
     "url": "git+https://github.com/digital-stage/server.git"
   },
   "dependencies": {
+    "@hacker-und-koch/di": "0.0.4",
+    "@hacker-und-koch/http": "0.0.4",
+    "@hacker-und-koch/logger": "0.0.4",
     "body-parser": "^1.19.0",
     "cors": "latest",
     "express": "^4.17.1",
