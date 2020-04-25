@@ -110,6 +110,7 @@ export class Stage {
             participant.socket.emit(
                 Events.stage.participants,
                 this.participants.value
+                    .filter(p => p.socket !== participant.socket)
             );
         });
 
