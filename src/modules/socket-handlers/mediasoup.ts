@@ -1,23 +1,36 @@
-import { Injectable, OnInit } from "@hacker-und-koch/di";
-import { Logger } from "@hacker-und-koch/logger";
+import {Injectable, OnInit} from "@hacker-und-koch/di";
+import {Logger} from "@hacker-und-koch/logger";
 import SocketIO from "socket.io";
-import { Worker } from "mediasoup/lib/Worker";
-import { Router } from "mediasoup/lib/Router";
-import { WebRtcTransport } from "mediasoup/lib/WebRtcTransport";
-import { Producer } from "mediasoup/lib/Producer";
-import { Consumer } from "mediasoup/lib/Consumer";
-import { RtpCapabilities } from "mediasoup/lib/RtpParameters";
-import { DtlsParameters } from "mediasoup/src/WebRtcTransport";
-import { MediaKind, RtpParameters } from "mediasoup/src/RtpParameters";
+import {Router} from "mediasoup/lib/Router";
+import {WebRtcTransport} from "mediasoup/lib/WebRtcTransport";
+import {Producer} from "mediasoup/lib/Producer";
+import {Consumer} from "mediasoup/lib/Consumer";
+import {RtpCapabilities} from "mediasoup/lib/RtpParameters";
+import {DtlsParameters} from "mediasoup/src/WebRtcTransport";
+import {MediaKind, RtpParameters} from "mediasoup/src/RtpParameters";
 
 const mediasoup = require("mediasoup");
 
 const config = require("../../config");
 
+interface Stage {
+    id: string;
+    router: Router;
+    clients: MediasoupClient[];
+}
+
+interface MediasoupClient {
+    uid: string;    // User id, also valid in the outside world
+    transports: Transport[];
+    producer: Producer[];
+    consumers: Consumer[];
+}
+
 @Injectable()
 export class Mediasoup implements OnInit {
 
-    constructor(private logger: Logger) { }
+    constructor(private logger: Logger) {
+    }
 
     async onInit() { // former initialize()
         this.worker = await mediasoup.createWorker({
@@ -29,41 +42,44 @@ export class Mediasoup implements OnInit {
         this.logger.log("Initialized Mediasoup");
     }
 
-    private worker: Worker = null;
-    private stageRouter: {
-        [stageId: string]: Router;
-    } = {};
+    private stages: Stage[];
 
-    private getStageRouter = async (stageId: string): Promise<Router> => {
-        if (!this.stageRouter[stageId]) {
-            this.stageRouter[stageId] = await this.worker.createRouter(config.mediasoup.routerOptions.mediaCodecs);
+
+    private getStage = async (stageId: string): Promise<Stage> => {
+        const stage: Stage = this.stages.find((stage: Stage) => stage.id === stageId);
+        if (!stage) {
+            // Create stage
+            this.stages.push({
+                id: stageId,
+                router: await this.worker.createRouter(config.mediasoup.routerOptions.mediaCodecs),
+                clients: []
+            });
         }
-        return this.stageRouter[stageId];
+        return stage;
     };
 
     public connectSocketToStage = async (socket: SocketIO.Socket, stageId: string, uid: string) => {
-        const router: Router = await this.getStageRouter(stageId);
-        const transports: {
-            [id: string]: WebRtcTransport;
-        } = {};
-        const producers: {
-            [id: string]: Producer;
-        } = {};
-        const consumers: {
-            [id: string]: Consumer;
-        } = {};
+        const stage: Stage = await this.getStage(stageId);
+        const client: MediasoupClient = {
+            uid: uid,
+            producer: [],   // Send client only producerIds (!)
+            transports: [], // Do not send
+            consumers: [] // Do not send
+        };
+        stage.clients.push(client);
 
-        socket.on("con/ms/get-rtp-capabilities", async ({ }, callback) => {
+
+        socket.on("con/ms/get-rtp-capabilities", async ({}, callback) => {
             console.log(socket.id + ": con/ms/get-rtp-capabilities");
-            console.log(router.rtpCapabilities);
-            callback(router.rtpCapabilities);
+            console.log(stage.router.rtpCapabilities);
+            callback(stage.router.rtpCapabilities);
         });
 
         /*** CREATE SEND TRANSPORT ***/
         socket.on("con/ms/create-send-transport", async (data: {}, callback) => {
             console.log(socket.id + ": con/ms/create-send-transport");
             try {
-                const transport: WebRtcTransport = await router.createWebRtcTransport({
+                const transport: WebRtcTransport = await stage.router.createWebRtcTransport({
                     listenIps: config.mediasoup.webRtcTransport.listenIps,
                     enableUdp: true,
                     enableTcp: true,
@@ -81,7 +97,7 @@ export class Mediasoup implements OnInit {
                     dtlsParameters: transport.dtlsParameters
                 });
             } catch (error) {
-                callback({ error: error });
+                callback({error: error});
             }
         });
 
@@ -90,7 +106,7 @@ export class Mediasoup implements OnInit {
             rtpCapabilities: RtpCapabilities;
         }, callback) => {
             console.log(socket.id + ": con/ms/create-receive-transport");
-            const transport: WebRtcTransport = await router.createWebRtcTransport({
+            const transport: WebRtcTransport = await stage.router.createWebRtcTransport({
                 listenIps: config.mediasoup.webRtcTransport.listenIps,
                 enableUdp: true,
                 enableTcp: true,
@@ -114,12 +130,12 @@ export class Mediasoup implements OnInit {
             console.log(socket.id + ": con/ms/connect-transport " + data.transportId);
             const transport: WebRtcTransport = transports[data.transportId];
             if (!transport) {
-                callback({ error: "Could not find transport " + data.transportId });
+                callback({error: "Could not find transport " + data.transportId});
                 return;
             }
-            await transport.connect({ dtlsParameters: data.dtlsParameters });
+            await transport.connect({dtlsParameters: data.dtlsParameters});
             /*** ANSWER BY SENDING EXISTING MEMBERS AND DIRECTOR ***/
-            callback({ connected: true });
+            callback({connected: true});
         });
         /*** SEND TRACK ***/
         socket.on("con/ms/send-track", async (data: {
@@ -128,9 +144,9 @@ export class Mediasoup implements OnInit {
             kind: MediaKind;
         }, callback) => {
             console.log(socket.id + ": con/ms/send-track");
-            const transport: WebRtcTransport = transports[data.transportId];
+            const transport: WebRtcTransport = client.transports[data.transportId];
             if (!transport) {
-                callback({ error: "Could not find transport " + data.transportId });
+                callback({error: "Could not find transport " + data.transportId});
                 return;
             }
             const producer: Producer = await transport.produce({
@@ -141,13 +157,13 @@ export class Mediasoup implements OnInit {
                 console.log("producer's transport closed", producer.id);
                 //closeProducer(producer);
             });
-            producers[producer.id] = producer;
+            client.producers.push(producer);
             // Inform all about new producer
             socket.broadcast.emit("producer-added", {
                 uid: uid,
                 producerId: producer.id
             });
-            callback({ id: producer.id });
+            callback({id: producer.id});
         });
 
         /*** CONSUME (paused track) ***/
@@ -159,7 +175,7 @@ export class Mediasoup implements OnInit {
             console.log(socket.id + ": consume");
             const transport: WebRtcTransport = transports[data.transportId];
             if (!transport) {
-                callback({ error: "Could not find transport " + data.transportId });
+                callback({error: "Could not find transport " + data.transportId});
                 return;
             }
             const consumer: Consumer = await transport.consume({
@@ -186,7 +202,7 @@ export class Mediasoup implements OnInit {
             console.log(socket.id + ": finished consume");
             const consumer: Consumer = consumers[data.consumerId];
             if (!consumer) {
-                return callback({ error: "consumer not found" });
+                return callback({error: "consumer not found"});
             }
             consumer.resume().then(
                 () => callback()
