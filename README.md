@@ -145,3 +145,19 @@ interface ServerIpPayload {
 * c>s>c `stg/ms/send-track`
 * c>s>c `stg/ms/consume`
 * c>s>c `stg/ms/finish-consume`
+
+* s>* `stg/ms/producer/update`
+```typescript
+interface MediasoupProducerAnnouncement {
+    userId: string;
+    producer: Producer[];
+}
+```
+* c>s>c `stg/ms/producer/all`
+```typescript
+// Server response
+interface MediasoupProducerAnnouncement {
+    userId: string;
+    producer: Producer[];
+}[]
+```

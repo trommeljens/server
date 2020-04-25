@@ -39,6 +39,8 @@ export class StageManager {
         stageId: string,
         user: firebase.auth.UserRecord
     ) {
+        socket.join(stageId);
+        
         const [_, mediasoupClient] = await Promise.all([
             this.webRtc.connectSocketToStage(socket, stageId, user.uid),
             this.mediasoup.connectSocketToStage(socket, stageId, user),

@@ -4,9 +4,10 @@ import { Producer } from "mediasoup/lib/Producer";
 import { Router } from "mediasoup/lib/Router";
 import { WebRtcTransport } from "mediasoup/lib/WebRtcTransport";
 import { BehaviorSubject, Subject, Subscription } from 'rxjs';
-import { reduce, tap, map } from 'rxjs/operators';
+import { reduce, tap, map, filter } from 'rxjs/operators';
 
 import { Events } from './events';
+import { MediasoupProducerResponse, MediasoupClient } from './mediasoup';
 
 export interface Collector<T> {
     data: T;
@@ -27,26 +28,6 @@ export interface StageParticipantAnnouncement {
     name: string;
     socketId: string;
     stageId: string;
-}
-
-export interface MediasoupClient {
-    user: firebase.auth.UserRecord;
-    producer: BehaviorSubject<Producer[]>;
-    transports: { [key: string]: WebRtcTransport };
-    consumers: { [key: string]: Consumer };
-    router: Router;
-}
-
-export interface MediasoupClientAnnouncement {
-    userId: string;
-    producer: Producer[];
-    transports: WebRtcTransport[];
-    consumers: Consumer[];
-}
-
-export interface MediasoupClientProducerAnnouncement {
-    userId: string;
-    producer: Producer[];
 }
 
 export class Stage {
@@ -97,15 +78,32 @@ export class Stage {
             data: participant,
         });
 
+        const subs: Subscription[] = [];
+
+
+        participant.socket.on(Events.stage.mediasoup.producer.all, async ({ }, callback) => {
+            // this.logger.info(`${socket.id}: ${Events.stage.mediasoup.producer.all}`);
+
+            const response: MediasoupProducerResponse[] = this.participants
+                .getValue()
+                .filter(p => participant.socket !== p.socket)
+                .map(p => ({
+                    userId: p.user.uid,
+                    producer: p.mediasoupClient.producer.value,
+                }));
+
+            callback(response);
+        });
+
         // subscribe AFTER announcing self
-        const participantsSub = this.participantAnnouncements
+        subs.push(this.participantAnnouncements
             .subscribe(participants =>
                 participant.socket.emit(
                     Events.stage.participants,
                     participants
                         .filter(p => p.socketId !== participant.socket.id)
                 )
-            );
+            ));
 
         // handle potential requests
         participant.socket.on(Events.stage.participants, () => {
@@ -116,7 +114,7 @@ export class Stage {
         });
 
         participant.socket.once('disconnect', () => // TODO: check event
-            participantsSub.unsubscribe()
+            subs.forEach(sub => sub && sub.unsubscribe())
         );
     }
 

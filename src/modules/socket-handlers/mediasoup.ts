@@ -11,7 +11,20 @@ import { RtpCapabilities } from "mediasoup/lib/RtpParameters";
 import { DtlsParameters } from "mediasoup/src/WebRtcTransport";
 import { MediaKind, RtpParameters } from "mediasoup/src/RtpParameters";
 import { BehaviorSubject } from "rxjs";
-import { MediasoupClient } from "./stage";
+import { Events } from "./events";
+
+export interface MediasoupProducerResponse {
+    userId: string;
+    producer: Producer[];
+}
+
+export interface MediasoupClient {
+    user: firebase.auth.UserRecord;
+    producer: BehaviorSubject<Producer[]>;
+    transports: { [key: string]: WebRtcTransport };
+    consumers: { [key: string]: Consumer };
+    router: Router;
+}
 
 const mediasoup = require("mediasoup");
 
@@ -47,6 +60,8 @@ export class Mediasoup implements OnInit {
 
         const router = this.router[stageId];
 
+        this.logger.spam('Router capabilities:', router.rtpCapabilities);
+
         const client: MediasoupClient = {
             user,
             producer: new BehaviorSubject([]),   // Send client only producerIds (!)
@@ -54,6 +69,16 @@ export class Mediasoup implements OnInit {
             consumers: {}, // Do not send
             router,
         };
+
+        client.producer
+            .subscribe(producer => socket.broadcast.to(stageId)
+                .emit(
+                    Events.stage.mediasoup.producer.update,
+                    {
+                        producer,
+                        userId: user.uid,
+                    } as MediasoupProducerResponse
+                ));
 
         socket.on("stg/ms/get-rtp-capabilities", async ({ }, callback) => {
             console.log(socket.id + ": stg/ms/get-rtp-capabilities");
