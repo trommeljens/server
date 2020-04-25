@@ -6,6 +6,7 @@ import * as firebase from 'firebase-admin';
 import { Socket } from "socket.io";
 
 import { Subject } from 'rxjs';
+import { Logger } from "@hacker-und-koch/logger";
 
 export interface BroadcastEvent {
     action: string;
@@ -21,8 +22,15 @@ export class SocketHandler implements OnDestroy {
         private mediasoup: MediasoupHandler,
         private webRtc: WebRTCHandler,
         private firebase: Firebase,
+        private logger: Logger,
     ) {
 
+    }
+
+    async onInit() {
+        this.broadcastEvents.subscribe({
+            complete: () => this.logger.info('broadcastEvents completed'),
+        });
     }
 
     async onDestroy() {
