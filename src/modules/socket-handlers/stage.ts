@@ -1,7 +1,9 @@
-import { Injectable, OnInit } from "@hacker-und-koch/di";
-import { Logger } from "@hacker-und-koch/logger";
 import * as firebase from 'firebase-admin';
-import { BehaviorSubject, Subject } from 'rxjs';
+import { Consumer } from "mediasoup/lib/Consumer";
+import { Producer } from "mediasoup/lib/Producer";
+import { Router } from "mediasoup/lib/Router";
+import { WebRtcTransport } from "mediasoup/lib/WebRtcTransport";
+import { BehaviorSubject, Subject, Subscription } from 'rxjs';
 import { reduce, tap, map } from 'rxjs/operators';
 
 import { Events } from './events';
@@ -14,6 +16,9 @@ export interface Collector<T> {
 export interface StageParticipant {
     user: firebase.auth.UserRecord;
     socket: SocketIO.Socket;
+
+    mediasoupClient: MediasoupClient;
+
     stageId: string;
 }
 
@@ -24,14 +29,36 @@ export interface StageParticipantAnnouncement {
     stageId: string;
 }
 
+export interface MediasoupClient {
+    user: firebase.auth.UserRecord;
+    producer: BehaviorSubject<Producer[]>;
+    transports: { [key: string]: WebRtcTransport };
+    consumers: { [key: string]: Consumer };
+    router: Router;
+}
+
+export interface MediasoupClientAnnouncement {
+    userId: string;
+    producer: Producer[];
+    transports: WebRtcTransport[];
+    consumers: Consumer[];
+}
+
+export interface MediasoupClientProducerAnnouncement {
+    userId: string;
+    producer: Producer[];
+}
+
 export class Stage {
 
     public participants: BehaviorSubject<StageParticipant[]> = new BehaviorSubject([]);
     public participantCollector: Subject<Collector<StageParticipant>> = new Subject();
     public participantAnnouncements: Subject<StageParticipantAnnouncement[]> = new Subject();
 
+    private subs: Subscription[] = [];
+
     constructor() {
-        this.participantCollector
+        const participantsSub = this.participantCollector
             .pipe(
                 tap(event => {
                     if (event.action === "add") {
@@ -47,7 +74,7 @@ export class Stage {
             )
             .subscribe(this.participants);
 
-        this.participants
+        const participantAnnouncementSub = this.participants
             .pipe(
                 map(participants =>
                     participants.map(participant => ({
@@ -58,7 +85,10 @@ export class Stage {
                     } as StageParticipantAnnouncement))
                 )
             )
-            .subscribe(x => this.participantAnnouncements);
+            .subscribe(this.participantAnnouncements);
+
+        this.subs.push(participantsSub);
+        this.subs.push(participantAnnouncementSub);
     }
 
     public addParticipant(participant: StageParticipant) {
@@ -69,13 +99,28 @@ export class Stage {
 
         // subscribe AFTER announcing self
         const participantsSub = this.participantAnnouncements
-            .subscribe(participants => participant.socket.emit(Events.stage.participants, participants));
+            .subscribe(participants =>
+                participant.socket.emit(
+                    Events.stage.participants,
+                    participants
+                        .filter(p => p.socketId !== participant.socket.id)
+                )
+            );
 
-        // handle request
+        // handle potential requests
         participant.socket.on(Events.stage.participants, () => {
-            participant.socket.emit(Events.stage.participants, this.participants.value);
+            participant.socket.emit(
+                Events.stage.participants,
+                this.participants.value
+            );
         });
 
-        participant.socket.once('disconnect', () => participantsSub.unsubscribe()); // TODO: check event
+        participant.socket.once('disconnect', () => // TODO: check event
+            participantsSub.unsubscribe()
+        );
+    }
+
+    close() {
+        this.subs.forEach(sub => sub && sub.unsubscribe());
     }
 }

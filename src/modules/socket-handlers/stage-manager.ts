@@ -32,8 +32,29 @@ export class StageManager {
         private soundjack: Soundjack,
         private firebase: Firebase,
         private logger: Logger,
-    ) {
+    ) { }
 
+    public async joinStageAndInitializeAllServices(
+        socket: SocketIO.Socket,
+        stageId: string,
+        user: firebase.auth.UserRecord
+    ) {
+        const [_, mediasoupClient] = await Promise.all([
+            this.webRtc.connectSocketToStage(socket, stageId, user.uid),
+            this.mediasoup.connectSocketToStage(socket, stageId, user),
+            this.soundjack.connectSocketToStage(socket, stageId, user.uid),
+        ]);
+
+        if (typeof this.stages[stageId] === 'undefined') {
+            throw new Error(`trying to add socket to non-existend stage ${stageId}`);
+        }
+        this.logger.info(`adding participant ${user.uid} to stage ${stageId}`);
+        this.stages[stageId].addParticipant({
+            user,
+            socket,
+            stageId,
+            mediasoupClient,
+        });
     }
 
     public async handleStageCreate(socket: SocketIO.Socket, data: StageCreatePayload) {
@@ -105,19 +126,4 @@ export class StageManager {
         }
     }
 
-    public async joinStageAndInitializeAllServices(socket: SocketIO.Socket, stageId: string, user: firebase.auth.UserRecord) {
-
-        await this.webRtc.connectSocketToStage(socket, stageId, user.uid);
-        await this.mediasoup.connectSocketToStage(socket, stageId, user.uid);
-        await this.soundjack.connectSocketToStage(socket, stageId, user.uid);
-
-        this.logger.info(`announcing added client ${user.uid} `);
-
-        if (typeof this.stages[stageId] === 'undefined') {
-            throw new Error(`trying to add socket to non-existend stage ${stageId}`);
-        }
-
-
-        this.stages[stageId].addParticipant({ user, socket, stageId });
-    }
 }

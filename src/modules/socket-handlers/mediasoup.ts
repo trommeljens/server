@@ -1,35 +1,33 @@
-import {Injectable, OnInit} from "@hacker-und-koch/di";
-import {Logger} from "@hacker-und-koch/logger";
+import { Injectable, OnInit } from "@hacker-und-koch/di";
+import { Logger } from "@hacker-und-koch/logger";
 import SocketIO from "socket.io";
-import {Router} from "mediasoup/lib/Router";
-import {WebRtcTransport} from "mediasoup/lib/WebRtcTransport";
-import {Producer} from "mediasoup/lib/Producer";
-import {Consumer} from "mediasoup/lib/Consumer";
-import {RtpCapabilities} from "mediasoup/lib/RtpParameters";
-import {DtlsParameters} from "mediasoup/src/WebRtcTransport";
-import {MediaKind, RtpParameters} from "mediasoup/src/RtpParameters";
+import * as firebase from 'firebase-admin';
+import { WebRtcTransport } from "mediasoup/lib/WebRtcTransport";
+import { Producer } from "mediasoup/lib/Producer";
+import { Consumer } from "mediasoup/lib/Consumer";
+import { Router } from "mediasoup/lib/Router";
+import { Worker } from "mediasoup/lib/Worker";
+import { RtpCapabilities } from "mediasoup/lib/RtpParameters";
+import { DtlsParameters } from "mediasoup/src/WebRtcTransport";
+import { MediaKind, RtpParameters } from "mediasoup/src/RtpParameters";
+import { BehaviorSubject } from "rxjs";
+import { MediasoupClient } from "./stage";
 
 const mediasoup = require("mediasoup");
 
 const config = require("../../config");
 
-interface Stage {
-    id: string;
-    router: Router;
-    clients: MediasoupClient[];
-}
-
-interface MediasoupClient {
-    uid: string;    // User id, also valid in the outside world
-    transports: Transport[];
-    producer: Producer[];
-    consumers: Consumer[];
-}
-
 @Injectable()
 export class Mediasoup implements OnInit {
 
+    private worker: Worker;
+
+    private router: {
+        [id: string]: Router
+    };
+
     constructor(private logger: Logger) {
+
     }
 
     async onInit() { // former initialize()
@@ -42,44 +40,32 @@ export class Mediasoup implements OnInit {
         this.logger.log("Initialized Mediasoup");
     }
 
-    private stages: Stage[];
-
-
-    private getStage = async (stageId: string): Promise<Stage> => {
-        const stage: Stage = this.stages.find((stage: Stage) => stage.id === stageId);
-        if (!stage) {
-            // Create stage
-            this.stages.push({
-                id: stageId,
-                router: await this.worker.createRouter(config.mediasoup.routerOptions.mediaCodecs),
-                clients: []
-            });
+    public async connectSocketToStage(socket: SocketIO.Socket, stageId: string, user: firebase.auth.UserRecord) {
+        if (typeof this.router[stageId] === 'undefined') {
+            this.router[stageId] = await this.worker.createRouter(config.mediasoup.routerOptions.mediaCodecs);
         }
-        return stage;
-    };
 
-    public connectSocketToStage = async (socket: SocketIO.Socket, stageId: string, uid: string) => {
-        const stage: Stage = await this.getStage(stageId);
+        const router = this.router[stageId];
+
         const client: MediasoupClient = {
-            uid: uid,
-            producer: [],   // Send client only producerIds (!)
-            transports: [], // Do not send
-            consumers: [] // Do not send
+            user,
+            producer: new BehaviorSubject([]),   // Send client only producerIds (!)
+            transports: {}, // Do not send
+            consumers: {}, // Do not send
+            router,
         };
-        stage.clients.push(client);
 
-
-        socket.on("stg/ms/get-rtp-capabilities", async ({}, callback) => {
+        socket.on("stg/ms/get-rtp-capabilities", async ({ }, callback) => {
             console.log(socket.id + ": stg/ms/get-rtp-capabilities");
-            console.log(stage.router.rtpCapabilities);
-            callback(stage.router.rtpCapabilities);
+            console.log(router.rtpCapabilities);
+            callback(router.rtpCapabilities);
         });
 
         /*** CREATE SEND TRANSPORT ***/
         socket.on("stg/ms/create-send-transport", async (data: {}, callback) => {
             console.log(socket.id + ": stg/ms/create-send-transport");
             try {
-                const transport: WebRtcTransport = await stage.router.createWebRtcTransport({
+                const transport: WebRtcTransport = await router.createWebRtcTransport({
                     listenIps: config.mediasoup.webRtcTransport.listenIps,
                     enableUdp: true,
                     enableTcp: true,
@@ -89,7 +75,7 @@ export class Mediasoup implements OnInit {
                 if (config.mediasoup.webRtcTransport.maxIncomingBitrate) {
                     await transport.setMaxIncomingBitrate(config.mediasoup.webRtcTransport.maxIncomingBitrate);
                 }
-                transports[transport.id] = transport;
+                client.transports[transport.id] = transport;
                 callback({
                     id: transport.id,
                     iceParameters: transport.iceParameters,
@@ -97,7 +83,7 @@ export class Mediasoup implements OnInit {
                     dtlsParameters: transport.dtlsParameters
                 });
             } catch (error) {
-                callback({error: error});
+                callback({ error: error });
             }
         });
 
@@ -106,14 +92,14 @@ export class Mediasoup implements OnInit {
             rtpCapabilities: RtpCapabilities;
         }, callback) => {
             console.log(socket.id + ": stg/ms/create-receive-transport");
-            const transport: WebRtcTransport = await stage.router.createWebRtcTransport({
+            const transport: WebRtcTransport = await router.createWebRtcTransport({
                 listenIps: config.mediasoup.webRtcTransport.listenIps,
                 enableUdp: true,
                 enableTcp: true,
                 preferUdp: true,
                 initialAvailableOutgoingBitrate: config.mediasoup.webRtcTransport.initialAvailableOutgoingBitrate
             });
-            transports[transport.id] = transport;
+            client.transports[transport.id] = transport;
             callback({
                 id: transport.id,
                 iceParameters: transport.iceParameters,
@@ -128,14 +114,14 @@ export class Mediasoup implements OnInit {
             dtlsParameters: DtlsParameters;
         }, callback) => {
             console.log(socket.id + ": stg/ms/connect-transport " + data.transportId);
-            const transport: WebRtcTransport = transports[data.transportId];
+            const transport: WebRtcTransport = client.transports[data.transportId];
             if (!transport) {
-                callback({error: "Could not find transport " + data.transportId});
+                callback({ error: "Could not find transport " + data.transportId });
                 return;
             }
-            await transport.connect({dtlsParameters: data.dtlsParameters});
+            await transport.connect({ dtlsParameters: data.dtlsParameters });
             /*** ANSWER BY SENDING EXISTING MEMBERS AND DIRECTOR ***/
-            callback({connected: true});
+            callback({ connected: true });
         });
 
         /*** SEND TRACK ***/
@@ -147,7 +133,7 @@ export class Mediasoup implements OnInit {
             console.log(socket.id + ": stg/ms/send-track");
             const transport: WebRtcTransport = client.transports[data.transportId];
             if (!transport) {
-                callback({error: "Could not find transport " + data.transportId});
+                callback({ error: "Could not find transport " + data.transportId });
                 return;
             }
             const producer: Producer = await transport.produce({
@@ -156,15 +142,21 @@ export class Mediasoup implements OnInit {
             });
             producer.on("transportclose", () => {
                 console.log("producer's transport closed", producer.id);
-                //closeProducer(producer);
+                //closeProducer(producer); ??
             });
-            client.producers.push(producer);
+
+            client.producer.next([
+                ...client.producer.value,
+                producer
+            ]);
+
             // Inform all about new producer
             socket.broadcast.emit("producer-added", {
-                uid: uid,
+                uid: client.user.uid,
                 producerId: producer.id
             });
-            callback({id: producer.id});
+
+            callback({ id: producer.id });
         });
 
         /*** CONSUME (paused track) ***/
@@ -174,9 +166,9 @@ export class Mediasoup implements OnInit {
             rtpCapabilities: RtpCapabilities;
         }, callback) => {
             console.log(socket.id + ": consume");
-            const transport: WebRtcTransport = transports[data.transportId];
+            const transport: WebRtcTransport = client.transports[data.transportId];
             if (!transport) {
-                callback({error: "Could not find transport " + data.transportId});
+                callback({ error: "Could not find transport " + data.transportId });
                 return;
             }
             const consumer: Consumer = await transport.consume({
@@ -184,7 +176,7 @@ export class Mediasoup implements OnInit {
                 rtpCapabilities: data.rtpCapabilities,
                 paused: true
             });
-            consumers[consumer.id] = consumer;
+            client.consumers[consumer.id] = consumer;
             callback({
                 id: consumer.id,
                 producerId: consumer.producerId,
@@ -201,13 +193,15 @@ export class Mediasoup implements OnInit {
             consumerId: string;
         }, callback) => {
             console.log(socket.id + ": finished consume");
-            const consumer: Consumer = consumers[data.consumerId];
+            const consumer: Consumer = client.consumers[data.consumerId];
             if (!consumer) {
-                return callback({error: "consumer not found"});
+                return callback({ error: "consumer not found" });
             }
             consumer.resume().then(
                 () => callback()
             );
         });
+
+        return client;
     };
 }
