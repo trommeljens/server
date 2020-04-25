@@ -101,12 +101,19 @@ interface StageParticipantAnnouncement {
     userId: string;
     name: string;
     socketId: string;
-}
+}[]
 ```
 * c>s `stg/participants`
 ```typescript
 // client payload
 void
+
+// server response
+interface StageParticipantAnnouncement {
+    userId: string;
+    name: string;
+    socketId: string;
+}[]
 ```
 
 ### WebRTC - `stg/p2p/*`
