@@ -1,7 +1,7 @@
 module.exports = {
   apps : [{
     name: "digitalstage-server",
-    script: "dist/server.js",
+    script: "dist/main.js",
 
     // Options reference: https://pm2.keymetrics.io/docs/usage/application-declaration/
     args: 'one two',
@@ -24,7 +24,7 @@ module.exports = {
       ref  : 'origin/feat/di-application',
       repo : "git@github.com:digital-stage/server.git",
       path : '/node/digitalstage',
-      'post-deploy' : 'npm install && npm run build && pm2 reload ecosystem.config.js --env production'
+      'post-deploy' : 'npm install && npm run build-ts && pm2 reload ecosystem.config.js --env production'
     }
   }
 };
