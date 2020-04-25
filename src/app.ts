@@ -4,18 +4,20 @@ import { Logger } from '@hacker-und-koch/logger';
 import { 
     HttpServer,
     Firebase,
-    MediasoupHandler,
-    WebRTCHandler,
+    Mediasoup,
+    WebRTC,
+    Soundjack,
     SocketHandler,
 } from './modules';
 
 @Application({
     declarations: [
-        HttpServer,
         Firebase,
-        MediasoupHandler,
-        WebRTCHandler,
+        Mediasoup,
+        WebRTC,
+        Soundjack,
         SocketHandler,
+        HttpServer,
     ],
 })
 export class App implements OnReady {

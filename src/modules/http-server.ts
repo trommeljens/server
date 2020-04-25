@@ -1,4 +1,4 @@
-import { Injectable, OnInit, OnConfigure } from "@hacker-und-koch/di";
+import { Injectable, OnInit, OnConfigure, OnDestroy } from "@hacker-und-koch/di";
 import express, { Express } from "express";
 import SocketIO from 'socket.io';
 import cors from "cors";
@@ -6,17 +6,21 @@ import * as https from "https";
 import { Server } from "https";
 import { Logger } from "@hacker-und-koch/logger";
 import * as fs from 'fs';
-
-import { SocketHandler, BroadcastEvent } from "./socket-handler";
+import { promisify } from 'util';
 
 const timesyncServer = require("timesync/server"); // workaround for ts error
 
+import { SocketHandler, BroadcastEvent } from "./socket-handler";
+import { Socket as TcpSocket } from "net";
+
+
 @Injectable()
-export class HttpServer implements OnConfigure, OnInit {
+export class HttpServer implements OnConfigure, OnInit, OnDestroy {
     private expressApp: Express;
     private webServer: Server;
     private socketIO: SocketIO.Server;
     private config: any;
+    private connections: TcpSocket[] = [];
 
     constructor(
         private logger: Logger,
@@ -36,6 +40,10 @@ export class HttpServer implements OnConfigure, OnInit {
 
         await this.initializeSocketCommunication();
         this.logger.log("Socket communication ready to please ;-)\nPlease world, tear down this serer enormous with your unlimited creativity!");
+    }
+
+    async onDestroy() {
+        await promisify(this.webServer.close)();
     }
 
     private createExpressApp() {
