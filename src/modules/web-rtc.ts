@@ -1,7 +1,7 @@
 import { Injectable, OnInit } from "@hacker-und-koch/di";
 
 @Injectable()
-export class MediasoupHandler implements OnInit {
+export class WebRTCHandler implements OnInit {
     async onInit() { // former initialize()
 
     }

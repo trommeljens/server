@@ -4,23 +4,41 @@ import express, { Express } from "express";
 import cors from "cors";
 import * as https from "https";
 import { Server } from "https";
-import { Firebase } from "./firebase";
 import { Logger } from "@hacker-und-koch/logger";
 import * as fs from 'fs';
 
+import { SocketHandler } from "./socket-handler";
+
 const timesyncServer = require("timesync/server"); // workaround for ts error
-const config = require("../config");
 
 @Injectable()
 export class HttpServer implements OnConfigure, OnInit {
     private expressApp: Express;
     private webServer: Server;
+    private socketIO: SocketIO.Server;
+    private config: any;
 
-    constructor(private firebase: Firebase, logger: Logger) {
+    constructor(
+        private logger: Logger,
+        private socketHandler: SocketHandler,
+    ) { }
 
+    async onConfigure(): Promise<void> {
+        this.config = require("../config");
     }
 
-    onConfigure(): Promise<void> {
+    async onInit(): Promise<void> {
+        this.createExpressApp();
+        this.createWebServer();
+
+        await new Promise(resolve => this.webServer.listen(this.config.listenPort, resolve));
+        this.logger.log("Running digital stage on port " + this.config.listenPort + " ...");
+
+        await this.initializeSocketCommunication();
+        this.logger.log("Socket communication ready to please ;-)\nPlease world, tear down this serer enormous with your unlimited creativity!");
+    }
+
+    private createExpressApp() {
         // Create Express app
         this.expressApp = express();
         this.expressApp.use(cors({ origin: true }));
@@ -29,22 +47,22 @@ export class HttpServer implements OnConfigure, OnInit {
             res.status(200).send("Alive and kickin'");
         });
         this.expressApp.use("/timesync", timesyncServer.requestHandler);
+    }
 
+    private createWebServer() {
         // Create HTTPS
         this.webServer = https.createServer({
-            key: fs.readFileSync(config.sslKey),
-            cert: fs.readFileSync(config.sslCrt),
-            ca: config.ca && fs.readFileSync(config.ca),
+            key: fs.readFileSync(this.config.sslKey),
+            cert: fs.readFileSync(this.config.sslCrt),
+            ca: this.config.ca && fs.readFileSync(this.config.ca),
             requestCert: false,
             rejectUnauthorized: false
         }, this.expressApp);
-
-        return;
     }
 
-
-    onInit(): Promise<void> {
-        return;
+    private async initializeSocketCommunication(): Promise<void> {
+        this.socketIO = SocketIO(this.webServer);
+        this.socketIO.origins("*:*");
+        this.socketIO.on("connection", socket => this.socketHandler.handle(socket));
     }
-
 }
