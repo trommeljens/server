@@ -11,11 +11,10 @@ export class Firebase implements OnInit {
     async onInit() {
 
         // Initialize firebase
-        // this.admin = firebase.initializeApp({
-        //     credential: firebase.credential.cert(serviceAccount),
-        //     databaseURL: "https://digitalstage-wirvsvirus.firebaseio.com"
-        // });
-
-        this.admin = "mocked for now" as any;
+        this.admin = firebase.initializeApp({
+            credential: firebase.credential.cert(serviceAccount),
+            databaseURL: "https://digitalstage-wirvsvirus.firebaseio.com"
+        });
     }
+
 }
