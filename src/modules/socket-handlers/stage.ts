@@ -124,6 +124,16 @@ export class Stage {
         return this.participants.value;
     }
 
+    getMsProducers(blacklistSocketId?: string) {
+        return this.getParticipants(blacklistSocketId)
+            .map(p => ({
+                userId: p.user.uid,
+                producer: p.mediasoupClient
+                    .producer
+                    .map(p => p.id),
+            }));
+    }
+
     close() {
         this.subs.forEach(sub => sub && sub.unsubscribe());
     }

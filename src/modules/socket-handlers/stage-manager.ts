@@ -74,22 +74,17 @@ export class StageManager {
 
         stage.addParticipant(participant);
 
+        socket.emit('stg/participants/state', stage.getMinimalParticipants());
+        socket.emit('stg/ms/producers/state', stage.getMsProducers());
+
         socket.on(Events.stage.participants.all, (_, callback) => {
             callback(stage.getMinimalParticipants(socket.id));
         });
 
         socket.on(Events.stage.mediasoup.producer.all, async ({ }, callback) => {
-            const response: MediasoupProducerResponse[] = stage.getParticipants(socket.id)
-                .map(p => ({
-                    userId: p.user.uid,
-                    producer: p.mediasoupClient.producer,
-                }));
-
+            const response: MediasoupProducerResponse[] = stage.getMsProducers();
             callback(response);
         });
-
-        // announce state to new joiner
-        socket.emit('stg/participant/added', stage.getMinimalParticipants());
 
         socket.on('disconnect', () => {
             stage.removeParticipant(participant);

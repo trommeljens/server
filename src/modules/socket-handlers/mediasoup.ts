@@ -16,7 +16,7 @@ import { StageEvent } from "./stage";
 
 export interface MediasoupProducerResponse {
     userId: string;
-    producer: Producer[];
+    producer: string[];
 }
 
 export interface MediasoupClient {
