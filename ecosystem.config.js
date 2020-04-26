@@ -21,7 +21,7 @@ module.exports = {
         production: {
             user: 'node',
             host: 'ocean-node',
-            ref: 'origin/feat/di-application',
+            ref: 'origin/develop',
             repo: "git@github.com:digital-stage/server.git",
             path: '/node/digitalstage',
             'post-deploy': 'npm install && npm run build && pm2 reload ecosystem.config.js --env production'
