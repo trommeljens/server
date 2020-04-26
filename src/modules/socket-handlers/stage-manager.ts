@@ -88,6 +88,9 @@ export class StageManager {
             callback(response);
         });
 
+        // announce state to new joiner
+        socket.emit('stg/producer/state', stage.getMinimalParticipants());
+
         socket.on('disconnect', () => {
             stage.removeParticipant(participant);
         });
