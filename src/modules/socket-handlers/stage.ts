@@ -72,16 +72,6 @@ export class Stage {
                 } as StageParticipantAnnouncement
             );
 
-        // handle requests
-        participant.socket.on(Events.stage.participants.all, () => {
-            participant.socket.emit(
-                Events.stage.participants.all,
-                this.participants.value
-                    .filter(p => p.socket !== participant.socket)
-            );
-        });
-
-
         // allow to query all mediasoup producers
         participant.socket.on(Events.stage.mediasoup.producer.all, async ({ }, callback) => {
             const response: MediasoupProducerResponse[] = this.participants

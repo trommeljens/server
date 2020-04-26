@@ -7,6 +7,7 @@ import { WebRTC } from "./web-rtc";
 import { Soundjack } from "./soundjack";
 import { Firebase } from "../firebase";
 import { Stage } from "./stage";
+import { Events } from "./events";
 
 export interface StageCreatePayload {
     token: string;
@@ -47,15 +48,25 @@ export class StageManager {
             this.soundjack.connectSocketToStage(socket, stageId, user.uid),
         ]);
 
-        if (typeof this.stages[stageId] === 'undefined') {
+        const stage = this.stages[stageId];
+
+        if (typeof stage === 'undefined') {
             throw new Error(`trying to add socket to non-existend stage ${stageId}`);
         }
         this.logger.info(`adding participant ${user.uid} to stage ${stageId}`);
-        this.stages[stageId].addParticipant({
+
+        stage.addParticipant({
             user,
             socket,
             stageId,
             mediasoupClient,
+        });
+
+        socket.on(Events.stage.participants.all, () => {
+            socket.emit(
+                Events.stage.participants.all,
+                stage.getParticipants(socket.id)
+            );
         });
     }
 
