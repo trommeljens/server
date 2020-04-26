@@ -48,13 +48,13 @@ export class StageManager {
             this.soundjack.connectSocketToStage(socket, stageId, user.uid),
         ]);
 
-        let stage = this.stages[stageId] || new Stage();
+        let stage = this.stages[stageId] || new Stage();
 
         // maybe later 
         // if (typeof stage === 'undefined') {
         //    throw new Error(`trying to add socket to non-existend stage ${stageId}`);
         // }
-        
+
         this.logger.info(`adding participant ${user.uid} to stage ${stageId}`);
 
         stage.addParticipant({
@@ -70,6 +70,14 @@ export class StageManager {
                 stage.getMinimalParticipants(socket.id),
             );
         });
+
+        mediasoupClient.producer
+            .subscribe(producer => {
+                socket.broadcast.to(stageId).emit(
+                    Events.stage.mediasoup.producer.update,
+                    producer.map(prod => prod.id)
+                );
+            });
 
         socket.on(Events.stage.mediasoup.producer.all, async ({ }, callback) => {
             const response: MediasoupProducerResponse[] = stage.getParticipants(socket.id)
