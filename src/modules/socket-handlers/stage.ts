@@ -4,6 +4,7 @@ import { reduce, tap, map } from 'rxjs/operators';
 
 import { Events } from './events';
 import { MediasoupProducerResponse, MediasoupClient } from './mediasoup';
+import { prependOnceListener } from 'cluster';
 
 export interface Collector<T> {
     data: T;
@@ -41,69 +42,44 @@ export declare interface StageEvent<T> {
 
 export class Stage {
 
-    private participants: BehaviorSubject<StageParticipant[]> = new BehaviorSubject([]);
-    private participantCollector: Subject<Collector<StageParticipant>> = new Subject();
+    private participants: StageParticipant[] = [];
 
     public events: Subject<StageEvent<any>> = new Subject();
 
-    private subs: Subscription[] = [];
-
     constructor() {
-        const participantsSub = this.participantCollector
-            .pipe(
-                tap(event => {
-                    if (event.action === 'add') {
-                        event.data.socket.join(event.data.stageId);
-                    }
-                }),
-                tap(event => {
-                    if (event.action === 'add') {
-                        this.events.next({
-                            action: 'participant/added',
-                            sender: event.data.socket,
-                            stageId: event.data.stageId,
-                            payload: {
-                                userId: event.data.user.uid,
-                                name: event.data.user.displayName,
-                                socketId: event.data.socket.id,
-                            }
-                        });
-                    } else if (event.action === 'remove') {
-                        this.events.next({
-                            action: 'participant/removed',
-                            sender: event.data.socket,
-                            stageId: event.data.stageId,
-                            payload: {
-                                userId: event.data.user.uid,
-                                name: event.data.user.displayName,
-                                socketId: event.data.socket.id,
-                            }
-                        });
-                    }
-                }),
-                reduce((acc: StageParticipant[], cur: Collector<StageParticipant>) => {
-                    if (cur.action === 'add') {
-                        acc.push(cur.data);
-                    }
-                    return acc;
-                }, [])
-            )
-            .subscribe(this.participants);
 
-        this.subs.push(participantsSub);
     }
 
     public addParticipant(participant: StageParticipant) {
-        this.participantCollector.next({
-            action: 'add',
-            data: participant,
+        participant.socket.join(participant.stageId);
+
+        this.events.next({
+            action: 'participant/added',
+            sender: participant.socket,
+            stageId: participant.stageId,
+            payload: {
+                userId: participant.user.uid,
+                name: participant.user.displayName,
+                socketId: participant.socket.id,
+            }
         });
+
+        this.participants.push(participant);
     }
 
     public removeParticipant(participant: StageParticipant) {
-        this.participantCollector.next({
-            action: 'remove',
-            data: participant,
+        const prevIdx = this.participants.indexOf(participant);
+        this.participants.splice(prevIdx, 1);
+
+        this.events.next({
+            action: 'participant/removed',
+            sender: participant.socket,
+            stageId: participant.stageId,
+            payload: {
+                userId: participant.user.uid,
+                name: participant.user.displayName,
+                socketId: participant.socket.id,
+            }
         });
     }
 
@@ -118,10 +94,10 @@ export class Stage {
 
     getParticipants(blacklistSocketId?: string) {
         if (typeof blacklistSocketId !== 'undefined') {
-            return this.participants.value.filter(participant => participant.socket.id !== blacklistSocketId);
+            return this.participants.filter(participant => participant.socket.id !== blacklistSocketId);
         }
 
-        return this.participants.value;
+        return [...this.participants];
     }
 
     getMsProducers(blacklistSocketId?: string) {
@@ -132,9 +108,5 @@ export class Stage {
                     .producer
                     .map(p => p.id),
             }));
-    }
-
-    close() {
-        this.subs.forEach(sub => sub && sub.unsubscribe());
     }
 }
