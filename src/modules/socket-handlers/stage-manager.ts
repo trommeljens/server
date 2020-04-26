@@ -38,6 +38,8 @@ export class StageManager {
     onConfigure() {
         this.mediasoup.events
             .subscribe(event => this.stages[event.stageId].events.next(event));
+        this.webRtc.events
+            .subscribe(event => this.stages[event.stageId].events.next(event));
     }
 
     public async joinStageAndInitializeAllServices(
@@ -47,41 +49,35 @@ export class StageManager {
     ): Promise<Stage> {
         socket.join(stageId);
 
-        const [_, mediasoupClient] = await Promise.all([
-            this.webRtc.connectSocketToStage(socket, stageId, user.uid),
-            this.mediasoup.connectSocketToStage(socket, stageId, user),
-            this.soundjack.connectSocketToStage(socket, stageId, user.uid),
-        ]);
-
         let stage = this.stages[stageId];
-        if (!stage) {
+        if (typeof stage === 'undefined') {
+            //  maybe better: throw new Error(`trying to add socket to non-existend stage ${stageId}`);
             stage = this.createStage(stageId);
         }
 
-        // maybe later 
-        // if (typeof stage === 'undefined') {
-        //    throw new Error(`trying to add socket to non-existend stage ${stageId}`);
-        // }
-
-        this.logger.info(`adding participant ${user.uid} to stage ${stageId}`);
-
+        const [_, mediasoupClient] = await Promise.all([
+            this.webRtc.connectSocketToStage(socket, stageId, user),
+            this.mediasoup.connectSocketToStage(socket, stageId, user),
+            this.soundjack.connectSocketToStage(socket, stageId, user.uid),
+        ]);
+        
         const participant = {
             user,
             socket,
             stageId,
             mediasoupClient,
         };
-
+        
+        this.logger.info(`adding participant ${user.uid} to stage ${stageId}`);
         stage.addParticipant(participant);
 
-        socket.emit('stg/participants/state', stage.getMinimalParticipants());
-        socket.emit('stg/ms/producers/state', stage.getMsProducers());
-
-        socket.on('stg/participants/state', (_, callback) => {
+        this.logger.info(`stage ${stageId} has now ${stage.getParticipants().length} participants.`)
+        
+        socket.on(Events.stage.participants.state, (_, callback) => {
             callback(stage.getMinimalParticipants(socket.id));
         });
-
-        socket.on('stg/ms/producers/state', async ({ }, callback) => {
+        
+        socket.on(Events.stage.mediasoup.producers.state, async ({ }, callback) => {
             const response: MediasoupProducerResponse[] = stage.getMsProducers();
             callback(response);
         });

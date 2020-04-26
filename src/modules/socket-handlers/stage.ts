@@ -1,23 +1,14 @@
 import * as firebase from 'firebase-admin';
-import { BehaviorSubject, Subject, Subscription } from 'rxjs';
-import { reduce, tap, map } from 'rxjs/operators';
+import { Subject } from 'rxjs';
 
-import { Events } from './events';
-import { MediasoupProducerResponse, MediasoupClient } from './mediasoup';
-import { prependOnceListener } from 'cluster';
-
-export interface Collector<T> {
-    data: T;
-    action: 'add' | 'remove';
-}
+import { Events, BusEvent } from './events';
+import { MediasoupClient } from './mediasoup';
 
 export interface StageParticipant {
     user: firebase.auth.UserRecord;
     socket: SocketIO.Socket;
-
-    mediasoupClient: MediasoupClient;
-
     stageId: string;
+    mediasoupClient: MediasoupClient;
 }
 
 export interface StageParticipantAnnouncement {
@@ -26,25 +17,22 @@ export interface StageParticipantAnnouncement {
     socketId: string;
 }
 
-export declare type StageAction = 'participant/added'
+export declare type StageAction 
+    = 'participant/added'
     | 'participant/removed'
     | 'participants/state'
     | 'ms/producer/added'
     | 'ms/producer/removed'
     | 'ms/producers/state';
 
-export declare interface StageEvent<T> {
-    action: StageAction;
-    sender: SocketIO.Socket;
-    stageId: string;
-    payload: T;
-}
+
+export declare interface StageEvent<T> extends BusEvent<StageAction, T> { }
 
 export class Stage {
 
     private participants: StageParticipant[] = [];
 
-    public events: Subject<StageEvent<any>> = new Subject();
+    public events: Subject<BusEvent<string, any>> = new Subject();
 
     constructor() {
 
@@ -92,7 +80,7 @@ export class Stage {
                 name: participant.user.displayName,
                 userId: participant.user.uid,
                 socketId: participant.socket.id,
-            }))
+            }));
     }
 
     getParticipants(blacklistSocketId?: string) {

@@ -1,20 +1,42 @@
 import { Injectable, OnInit } from "@hacker-und-koch/di";
 import { Logger } from "@hacker-und-koch/logger";
 
+import * as firebase from 'firebase-admin';
+import { Subject } from "rxjs";
+
+import { BusEvent } from './events';
+
+export declare type WebRtcAction
+    = 'p2p/peer-added';
+
+export declare interface WebRtcEvent<T> extends BusEvent<WebRtcAction, T> { }
+
 @Injectable()
 export class WebRTC implements OnInit {
 
     constructor(private logger: Logger) { }
+
+    public events: Subject<WebRtcEvent<any>> = new Subject();
 
     async onInit() {
         this.logger.log("Initialized WebRTC");
     }
 
     // former initializeSingleSocket
-    public async connectSocketToStage(socket: SocketIO.Socket, stage: string, uid: string) {
-        socket.broadcast.to(stage).emit("stg/p2p/peer-added", {
-            uid: uid,
-            socketId: socket.id
+    public async connectSocketToStage(socket: SocketIO.Socket, stage: string, user: firebase.auth.UserRecord) {
+        // socket.broadcast.to(stage).emit("stg/p2p/peer-added", {
+        //     uid: user.uid,
+        //     socketId: socket.id
+        // });
+
+        this.events.next({
+            action: 'p2p/peer-added',
+            stageId: stage,
+            sender: socket,
+            payload: {
+                uid: user.uid,
+                socketId: socket.id
+            }
         });
 
         socket.on("stg/p2p/make-offer", (data: {
@@ -24,7 +46,7 @@ export class WebRTC implements OnInit {
             offer: RTCSessionDescriptionInit;
         }) => {
             socket.to(data.targetSocketId).emit("stg/p2p/offer-made", {
-                uid: uid,
+                uid: user.uid,
                 socketId: socket.id,
                 offer: data.offer
             });
@@ -37,7 +59,7 @@ export class WebRTC implements OnInit {
             answer: RTCSessionDescriptionInit;
         }) => {
             socket.to(data.targetSocketId).emit("stg/p2p/answer-made", {
-                uid: uid,
+                uid: user.uid,
                 socketId: socket.id,
                 answer: data.answer
             });
@@ -45,7 +67,7 @@ export class WebRTC implements OnInit {
 
         socket.on("stg/p2p/send-candidate", (data) => {
             socket.to(data.targetSocketId).emit("stg/p2p/candidate-sent", {
-                uid: uid,
+                uid: user.uid,
                 socketId: socket.id,
                 candidate: data.candidate
             });
