@@ -55,7 +55,8 @@ export class Mediasoup implements OnInit {
 
     public async connectSocketToStage(socket: SocketIO.Socket, stageId: string, user: firebase.auth.UserRecord) {
         if (typeof this.router[stageId] === 'undefined') {
-            this.router[stageId] = await this.worker.createRouter(config.mediasoup.routerOptions.mediaCodecs);
+            const mediaCodecs = config.mediasoup.routerOptions.mediaCodecs;
+            this.router[stageId] = await this.worker.createRouter({ mediaCodecs });
         }
 
         const router = this.router[stageId];
