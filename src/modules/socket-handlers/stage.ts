@@ -23,14 +23,12 @@ export interface StageParticipantAnnouncement {
     userId: string;
     name: string;
     socketId: string;
-    stageId: string;
 }
 
 export class Stage {
 
-    public participants: BehaviorSubject<StageParticipant[]> = new BehaviorSubject([]);
+    private participants: BehaviorSubject<StageParticipant[]> = new BehaviorSubject([]);
     public participantCollector: Subject<Collector<StageParticipant>> = new Subject();
-    public participantAnnouncements: Subject<StageParticipantAnnouncement[]> = new Subject();
 
     private subs: Subscription[] = [];
 
@@ -51,21 +49,7 @@ export class Stage {
             )
             .subscribe(this.participants);
 
-        const participantAnnouncementSub = this.participants
-            .pipe(
-                map(participants =>
-                    participants.map(participant => ({
-                        userId: participant.user.uid,
-                        name: participant.user.displayName,
-                        socketId: participant.socket.id,
-                        stageId: participant.stageId,
-                    } as StageParticipantAnnouncement))
-                )
-            )
-            .subscribe(this.participantAnnouncements);
-
         this.subs.push(participantsSub);
-        this.subs.push(participantAnnouncementSub);
     }
 
     public addParticipant(participant: StageParticipant) {
@@ -82,7 +66,7 @@ export class Stage {
                 Events.stage.participants.added,
                 {
                     name: participant.user.displayName,
-                    userId:  participant.user.uid,
+                    userId: participant.user.uid,
                     socketId: participant.socket.id,
                     stageId: participant.stageId,
                 } as StageParticipantAnnouncement
@@ -115,6 +99,19 @@ export class Stage {
         participant.socket.once('disconnect', () => // TODO: check event
             subs.forEach(sub => sub && sub.unsubscribe())
         );
+    }
+
+    getParticipants(blacklistSocketId?: string): StageParticipantAnnouncement[] {
+        let participants = this.participants.value;
+        if (typeof blacklistSocketId !== 'undefined') {
+            participants = this.participants.value.filter(participant => participant.socket.id !== blacklistSocketId);
+        }
+
+        return participants.map(participant => ({
+            name: participant.user.displayName,
+            userId: participant.user.uid,
+            socketId: participant.socket.id,
+        }))
     }
 
     close() {
