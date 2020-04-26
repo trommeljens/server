@@ -77,11 +77,11 @@ export class StageManager {
         socket.emit('stg/participants/state', stage.getMinimalParticipants());
         socket.emit('stg/ms/producers/state', stage.getMsProducers());
 
-        socket.on(Events.stage.participants.all, (_, callback) => {
+        socket.on('stg/participants/state', (_, callback) => {
             callback(stage.getMinimalParticipants(socket.id));
         });
 
-        socket.on(Events.stage.mediasoup.producer.all, async ({ }, callback) => {
+        socket.on('stg/ms/producers/state', async ({ }, callback) => {
             const response: MediasoupProducerResponse[] = stage.getMsProducers();
             callback(response);
         });
