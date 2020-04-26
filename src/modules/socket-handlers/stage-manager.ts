@@ -48,11 +48,13 @@ export class StageManager {
             this.soundjack.connectSocketToStage(socket, stageId, user.uid),
         ]);
 
-        const stage = this.stages[stageId];
+        let stage = this.stages[stageId] || new Stage();
 
-        if (typeof stage === 'undefined') {
-            throw new Error(`trying to add socket to non-existend stage ${stageId}`);
-        }
+        // maybe later 
+        // if (typeof stage === 'undefined') {
+        //    throw new Error(`trying to add socket to non-existend stage ${stageId}`);
+        // }
+        
         this.logger.info(`adding participant ${user.uid} to stage ${stageId}`);
 
         stage.addParticipant({
