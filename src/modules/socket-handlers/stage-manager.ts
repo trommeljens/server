@@ -74,18 +74,6 @@ export class StageManager {
 
         stage.addParticipant(participant);
 
-        socket.broadcast
-            .to(stageId)
-            .emit(
-                Events.stage.participants.added,
-                {
-                    name: user.displayName,
-                    userId: user.uid,
-                    socketId: socket.id,
-                    stageId: stageId,
-                } as StageParticipantAnnouncement
-            );
-
         socket.on(Events.stage.participants.all, (_, callback) => {
             callback(stage.getMinimalParticipants(socket.id));
         });
