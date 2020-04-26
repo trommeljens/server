@@ -1,10 +1,6 @@
 import * as firebase from 'firebase-admin';
-import { Consumer } from "mediasoup/lib/Consumer";
-import { Producer } from "mediasoup/lib/Producer";
-import { Router } from "mediasoup/lib/Router";
-import { WebRtcTransport } from "mediasoup/lib/WebRtcTransport";
 import { BehaviorSubject, Subject, Subscription } from 'rxjs';
-import { reduce, tap, map, filter } from 'rxjs/operators';
+import { reduce, tap, map } from 'rxjs/operators';
 
 import { Events } from './events';
 import { MediasoupProducerResponse, MediasoupClient } from './mediasoup';
@@ -103,7 +99,8 @@ export class Stage {
                     participants
                         .filter(p => p.socketId !== participant.socket.id)
                 )
-            ));
+            )
+        );
 
         // handle potential requests
         participant.socket.on(Events.stage.participants, () => {

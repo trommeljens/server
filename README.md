@@ -103,19 +103,6 @@ interface StageParticipantAnnouncement {
     socketId: string;
 }[]
 ```
-* c>s `stg/participants`
-```typescript
-// client payload
-void
-
-// server response
-interface StageParticipantAnnouncement {
-    userId: string;
-    name: string;
-    socketId: string;
-}[]
-```
-
 ### WebRTC - `stg/p2p/*`
 * s>* `stg/p2p/peer-added`
 * c>s `stg/p2p/make-offer`

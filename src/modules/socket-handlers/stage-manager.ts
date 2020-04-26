@@ -40,7 +40,7 @@ export class StageManager {
         user: firebase.auth.UserRecord
     ) {
         socket.join(stageId);
-        
+
         const [_, mediasoupClient] = await Promise.all([
             this.webRtc.connectSocketToStage(socket, stageId, user.uid),
             this.mediasoup.connectSocketToStage(socket, stageId, user),
@@ -73,7 +73,7 @@ export class StageManager {
                 name: data.stageName,
                 type: data.type,
                 password: data.password,
-                directorUid: decodedIdToken.uid
+                directorUid: decodedIdToken.uid,
             });
 
         const stageId = docRef.id;
@@ -84,7 +84,7 @@ export class StageManager {
 
         this.stages[stageId] = new Stage();
 
-        await this.joinStageAndInitializeAllServices(socket, stageId, user)
+        await this.joinStageAndInitializeAllServices(socket, stageId, user);
 
         return stageId;
     }
@@ -127,5 +127,4 @@ export class StageManager {
             return { error: "Could not find stage" };
         }
     }
-
 }
