@@ -68,9 +68,12 @@ export class Stage {
     }
 
     public removeParticipant(participant: StageParticipant) {
-        const prevIdx = this.participants.indexOf(participant);
-        this.participants.splice(prevIdx, 1);
-
+        this.participants
+            .map((part, i) => part.user.uid === participant.user.uid ? i : null)
+            .filter(x => x !== null)
+            .reverse()
+            .forEach(i => this.participants.splice(i, 1));
+        
         this.events.next({
             action: 'participant/removed',
             sender: participant.socket,
