@@ -42,8 +42,13 @@ export class HttpServer implements OnConfigure, OnInit, OnDestroy {
         this.logger.log("Socket communication ready to please ;-)\nPlease world, tear down this serer enormous with your unlimited creativity!");
     }
 
-    async onDestroy() {
-        await promisify(this.webServer.close)();
+    async onDestroy(): Promise<void> {
+        return new Promise((resolve, reject) => {
+            this.connections.forEach(con => {
+                con.destroy();
+            })
+            // this.webServer.close((err) => err ? reject(err) : resolve())
+        });
     }
 
     private createExpressApp() {

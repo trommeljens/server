@@ -25,10 +25,26 @@ export interface StageParticipantAnnouncement {
     socketId: string;
 }
 
+export declare type StageAction = 'participant/added'
+    | 'participant/removed'
+    | 'participants/state'
+    | 'ms/producer/added'
+    | 'ms/producer/removed'
+    | 'ms/producers/state';
+
+export declare interface StageEvent<T> {
+    action: StageAction;
+    sender: SocketIO.Socket;
+    stageId: string;
+    payload: T;
+}
+
 export class Stage {
 
     private participants: BehaviorSubject<StageParticipant[]> = new BehaviorSubject([]);
     private participantCollector: Subject<Collector<StageParticipant>> = new Subject();
+
+    public events: Subject<StageEvent<any>> = new Subject();
 
     private subs: Subscription[] = [];
 
@@ -36,8 +52,33 @@ export class Stage {
         const participantsSub = this.participantCollector
             .pipe(
                 tap(event => {
-                    if (event.action === "add") {
+                    if (event.action === 'add') {
                         event.data.socket.join(event.data.stageId);
+                    }
+                }),
+                tap(event => {
+                    if (event.action === 'add') {
+                        this.events.next({
+                            action: 'participant/added',
+                            sender: event.data.socket,
+                            stageId: event.data.stageId,
+                            payload: {
+                                userId: event.data.user.uid,
+                                name: event.data.user.displayName,
+                                socketId: event.data.socket.id,
+                            }
+                        });
+                    } else if (event.action === 'remove') {
+                        this.events.next({
+                            action: 'participant/removed',
+                            sender: event.data.socket,
+                            stageId: event.data.stageId,
+                            payload: {
+                                userId: event.data.user.uid,
+                                name: event.data.user.displayName,
+                                socketId: event.data.socket.id,
+                            }
+                        });
                     }
                 }),
                 reduce((acc: StageParticipant[], cur: Collector<StageParticipant>) => {
@@ -45,7 +86,7 @@ export class Stage {
                         acc.push(cur.data);
                     }
                     return acc;
-                }, []),
+                }, [])
             )
             .subscribe(this.participants);
 

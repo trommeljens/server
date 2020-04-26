@@ -35,6 +35,11 @@ export class StageManager {
         private logger: Logger,
     ) { }
 
+    onConfigure() {
+        this.mediasoup.events
+            .subscribe(event => this.stages[event.stageId].events.next(event));
+    }
+
     public async joinStageAndInitializeAllServices(
         socket: SocketIO.Socket,
         stageId: string,
@@ -48,7 +53,10 @@ export class StageManager {
             this.soundjack.connectSocketToStage(socket, stageId, user.uid),
         ]);
 
-        let stage = this.stages[stageId] || new Stage();
+        let stage = this.stages[stageId];
+        if (!stage) {
+            stage = this.createStage(stageId);
+        }
 
         // maybe later 
         // if (typeof stage === 'undefined') {
@@ -78,26 +86,15 @@ export class StageManager {
                 } as StageParticipantAnnouncement
             );
 
-        socket.on(Events.stage.participants.all, () => {
-            socket.emit(
-                Events.stage.participants.all,
-                stage.getMinimalParticipants(socket.id),
-            );
+        socket.on(Events.stage.participants.all, (_, callback) => {
+            callback(stage.getMinimalParticipants(socket.id));
         });
-
-        mediasoupClient.producer
-            .subscribe(producer => {
-                socket.broadcast.to(stageId).emit(
-                    Events.stage.mediasoup.producer.update,
-                    producer.map(prod => prod.id)
-                );
-            });
 
         socket.on(Events.stage.mediasoup.producer.all, async ({ }, callback) => {
             const response: MediasoupProducerResponse[] = stage.getParticipants(socket.id)
                 .map(p => ({
                     userId: p.user.uid,
-                    producer: p.mediasoupClient.producer.value,
+                    producer: p.mediasoupClient.producer,
                 }));
 
             callback(response);
@@ -131,7 +128,7 @@ export class StageManager {
             .auth()
             .getUser(decodedIdToken.uid);
 
-        this.stages[stageId] = new Stage();
+        this.createStage(stageId);
 
         await this.joinStageAndInitializeAllServices(socket, stageId, user);
 
@@ -175,5 +172,20 @@ export class StageManager {
             this.logger.warn(`user tried to join unavailable stage: ${data.stageId}`);
             return { error: "Could not find stage" };
         }
+    }
+
+    private createStage(stageId: string): Stage {
+        const stage = new Stage();
+
+        stage.events
+            .subscribe(event =>
+                event.sender
+                    .broadcast
+                    .to(event.stageId)
+                    .emit(`stg/${event.action}`, event.payload)
+            );
+
+        this.stages[stageId] = stage;
+        return stage;
     }
 }
