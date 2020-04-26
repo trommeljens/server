@@ -6,7 +6,7 @@ import { Mediasoup, MediasoupProducerResponse } from "./mediasoup";
 import { WebRTC } from "./web-rtc";
 import { Soundjack } from "./soundjack";
 import { Firebase } from "../firebase";
-import { Stage } from "./stage";
+import { Stage, StageParticipantAnnouncement } from "./stage";
 import { Events } from "./events";
 
 export interface StageCreatePayload {
@@ -57,12 +57,26 @@ export class StageManager {
 
         this.logger.info(`adding participant ${user.uid} to stage ${stageId}`);
 
-        stage.addParticipant({
+        const participant = {
             user,
             socket,
             stageId,
             mediasoupClient,
-        });
+        };
+
+        stage.addParticipant(participant);
+
+        socket.broadcast
+            .to(stageId)
+            .emit(
+                Events.stage.participants.added,
+                {
+                    name: user.displayName,
+                    userId: user.uid,
+                    socketId: socket.id,
+                    stageId: stageId,
+                } as StageParticipantAnnouncement
+            );
 
         socket.on(Events.stage.participants.all, () => {
             socket.emit(
@@ -87,6 +101,10 @@ export class StageManager {
                 }));
 
             callback(response);
+        });
+
+        socket.on('disconnect', () => {
+            stage.removeParticipant(participant);
         });
     }
 

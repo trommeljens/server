@@ -57,25 +57,13 @@ export class Stage {
             action: 'add',
             data: participant,
         });
+    }
 
-        const subs: Subscription[] = [];
-
-        participant.socket.broadcast
-            .to(participant.stageId)
-            .emit(
-                Events.stage.participants.added,
-                {
-                    name: participant.user.displayName,
-                    userId: participant.user.uid,
-                    socketId: participant.socket.id,
-                    stageId: participant.stageId,
-                } as StageParticipantAnnouncement
-            );
-
-
-        participant.socket.once('disconnect', () => // TODO: check event
-            subs.forEach(sub => sub && sub.unsubscribe())
-        );
+    public removeParticipant(participant: StageParticipant) {
+        this.participantCollector.next({
+            action: 'remove',
+            data: participant,
+        });
     }
 
     getMinimalParticipants(blacklistSocketId?: string): StageParticipantAnnouncement[] {
