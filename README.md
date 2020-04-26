@@ -68,3 +68,115 @@ Then you can start the server by using
     npm dev
     
 The server is then running on port 3001    
+
+
+# Socket events
+_(s=server, c=client, *=all stage clients, c>s>c=request)_
+
+## Stage - `stg/*`
+* c>s `stg/create`
+```typescript
+// client payload
+interface StageCreatePayload {
+    token: string;
+    stageName: string;
+    type: "theater" | "music" | "conference";
+    password: string;
+}
+```
+
+* c>s `stg/join`
+```typescript
+// client payload
+interface StageJoinPayload {
+    token: string;
+    stageId: string;
+    password: string;
+}
+```
+* c>s>c | s>* `stg/participants/state`
+```typescript
+// server payload
+interface StageParticipantAnnouncement {
+    userId: string;
+    name: string;
+    socketId: string;
+}[]
+```
+* s>* `stg/participant/added`
+```typescript
+// server payload
+interface StageParticipantAnnouncement {
+    userId: string;
+    name: string;
+    socketId: string;
+}
+```
+* s>* `stg/participant/removed`
+```typescript
+// server payload
+interface StageParticipantAnnouncement {
+    userId: string;
+    name: string;
+    socketId: string;
+}
+```
+### WebRTC - `stg/p2p/*`
+* s>* `stg/p2p/peer-added`
+* c>s `stg/p2p/make-offer`
+* s>c `stg/p2p/offer-made`
+* c>s `stg/p2p/make-answer`
+* s>c `stg/p2p/answer-made`
+* c>s `stg/p2p/send-candidate`
+* s>c `stg/p2p/candidate-sent`
+
+### Soundjack - `stg/sj/*`
+* c>s `stg/sj/send-ip`
+```typescript
+interface ClientIpPayload {
+    ip: string;
+    port: number;
+}
+```
+
+* s>c `stg/sj/ip-sent`
+```typescript
+interface ServerIpPayload {
+    uid: string;
+    ip: string;
+    port: number;
+}
+```
+
+### Mediasoup - `stg/ms/*`
+* c>s>c `stg/ms/get-rtp-capabilities`
+* c>s>c `stg/ms/create-send-transport`
+* c>s>c `stg/ms/create-send-transport`
+* c>s>c `stg/ms/create-receive-transport`
+* c>s>c `stg/ms/connect-transport`
+* c>s>c `stg/ms/send-track`
+* c>s>c `stg/ms/consume`
+* c>s>c `stg/ms/finish-consume`
+
+* s>* `stg/ms/producer/added`
+```typescript
+interface MediasoupProducerAnnouncement {
+    userId: string;
+    producer: string[]; // producer ids
+}
+```
+* s>* `stg/ms/producer/removed`
+```typescript
+interface MediasoupProducerAnnouncement {
+    userId: string;
+    producer: string[]; // producer ids
+}
+```
+* c>s>c `stg/ms/producers/state`
+```typescript
+// Server response
+interface MediasoupProducerAnnouncement {
+    userId: string;
+    producer: string[]; // producer ids
+}[]
+```
