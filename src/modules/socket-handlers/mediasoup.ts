@@ -37,7 +37,7 @@ export class Mediasoup implements OnInit {
 
     private router: {
         [id: string]: Router
-    };
+    } = {};
 
     constructor(private logger: Logger) {
 
