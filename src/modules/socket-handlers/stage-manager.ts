@@ -87,6 +87,7 @@ export class StageManager {
         });
 
         socket.on('disconnect', () => {
+            this.logger.info(`removing user ${participant.user.uid} from Stage`);
             stage.removeParticipant(participant);
         });
 
