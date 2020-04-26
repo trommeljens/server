@@ -76,10 +76,30 @@ export class Stage {
 
         const subs: Subscription[] = [];
 
+        participant.socket.broadcast
+            .to(participant.stageId)
+            .emit(
+                Events.stage.participants.added,
+                {
+                    name: participant.user.displayName,
+                    userId:  participant.user.uid,
+                    socketId: participant.socket.id,
+                    stageId: participant.stageId,
+                } as StageParticipantAnnouncement
+            );
 
+        // handle requests
+        participant.socket.on(Events.stage.participants.all, () => {
+            participant.socket.emit(
+                Events.stage.participants.all,
+                this.participants.value
+                    .filter(p => p.socket !== participant.socket)
+            );
+        });
+
+
+        // allow to query all mediasoup producers
         participant.socket.on(Events.stage.mediasoup.producer.all, async ({ }, callback) => {
-            // this.logger.info(`${socket.id}: ${Events.stage.mediasoup.producer.all}`);
-
             const response: MediasoupProducerResponse[] = this.participants
                 .getValue()
                 .filter(p => participant.socket !== p.socket)
@@ -91,25 +111,6 @@ export class Stage {
             callback(response);
         });
 
-        // subscribe AFTER announcing self
-        subs.push(this.participantAnnouncements
-            .subscribe(participants =>
-                participant.socket.emit(
-                    Events.stage.participants,
-                    participants
-                        .filter(p => p.socketId !== participant.socket.id)
-                )
-            )
-        );
-
-        // handle potential requests
-        participant.socket.on(Events.stage.participants, () => {
-            participant.socket.emit(
-                Events.stage.participants,
-                this.participants.value
-                    .filter(p => p.socket !== participant.socket)
-            );
-        });
 
         participant.socket.once('disconnect', () => // TODO: check event
             subs.forEach(sub => sub && sub.unsubscribe())

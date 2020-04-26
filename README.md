@@ -94,7 +94,7 @@ interface StageJoinPayload {
     password: string;
 }
 ```
-* s>* | c>s>c `stg/participants`
+* c>s>c `stg/participants`
 ```typescript
 // server payload
 interface StageParticipantAnnouncement {
@@ -102,6 +102,15 @@ interface StageParticipantAnnouncement {
     name: string;
     socketId: string;
 }[]
+```
+* s>* `stg/participant-added`
+```typescript
+// server payload
+interface StageParticipantAnnouncement {
+    userId: string;
+    name: string;
+    socketId: string;
+}
 ```
 ### WebRTC - `stg/p2p/*`
 * s>* `stg/p2p/peer-added`
