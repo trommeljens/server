@@ -2,7 +2,7 @@ import { Injectable, OnInit } from "@hacker-und-koch/di";
 import { Logger } from "@hacker-und-koch/logger";
 import * as firebase from 'firebase-admin';
 
-import { Mediasoup } from "./mediasoup";
+import { Mediasoup, MediasoupProducerResponse } from "./mediasoup";
 import { WebRTC } from "./web-rtc";
 import { Soundjack } from "./soundjack";
 import { Firebase } from "../firebase";
@@ -67,8 +67,18 @@ export class StageManager {
         socket.on(Events.stage.participants.all, () => {
             socket.emit(
                 Events.stage.participants.all,
-                stage.getParticipants(socket.id)
+                stage.getMinimalParticipants(socket.id),
             );
+        });
+
+        socket.on(Events.stage.mediasoup.producer.all, async ({ }, callback) => {
+            const response: MediasoupProducerResponse[] = stage.getParticipants(socket.id)
+                .map(p => ({
+                    userId: p.user.uid,
+                    producer: p.mediasoupClient.producer.value,
+                }));
+
+            callback(response);
         });
     }
 

@@ -28,7 +28,7 @@ export interface StageParticipantAnnouncement {
 export class Stage {
 
     private participants: BehaviorSubject<StageParticipant[]> = new BehaviorSubject([]);
-    public participantCollector: Subject<Collector<StageParticipant>> = new Subject();
+    private participantCollector: Subject<Collector<StageParticipant>> = new Subject();
 
     private subs: Subscription[] = [];
 
@@ -72,36 +72,27 @@ export class Stage {
                 } as StageParticipantAnnouncement
             );
 
-        // allow to query all mediasoup producers
-        participant.socket.on(Events.stage.mediasoup.producer.all, async ({ }, callback) => {
-            const response: MediasoupProducerResponse[] = this.participants
-                .getValue()
-                .filter(p => participant.socket !== p.socket)
-                .map(p => ({
-                    userId: p.user.uid,
-                    producer: p.mediasoupClient.producer.value,
-                }));
-
-            callback(response);
-        });
-
 
         participant.socket.once('disconnect', () => // TODO: check event
             subs.forEach(sub => sub && sub.unsubscribe())
         );
     }
 
-    getParticipants(blacklistSocketId?: string): StageParticipantAnnouncement[] {
-        let participants = this.participants.value;
+    getMinimalParticipants(blacklistSocketId?: string): StageParticipantAnnouncement[] {
+        return this.getParticipants(blacklistSocketId)
+            .map(participant => ({
+                name: participant.user.displayName,
+                userId: participant.user.uid,
+                socketId: participant.socket.id,
+            }))
+    }
+
+    getParticipants(blacklistSocketId?: string) {
         if (typeof blacklistSocketId !== 'undefined') {
-            participants = this.participants.value.filter(participant => participant.socket.id !== blacklistSocketId);
+            return this.participants.value.filter(participant => participant.socket.id !== blacklistSocketId);
         }
 
-        return participants.map(participant => ({
-            name: participant.user.displayName,
-            userId: participant.user.uid,
-            socketId: participant.socket.id,
-        }))
+        return this.participants.value;
     }
 
     close() {
