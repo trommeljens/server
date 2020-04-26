@@ -93,7 +93,7 @@ export class StageManager {
 
         return stage;
     }
-    
+
     public async handleStageCreate(socket: SocketIO.Socket, data: StageCreatePayload) {
         this.logger.info("create-stage()");
         const decodedIdToken = await this.firebase.admin
@@ -117,11 +117,18 @@ export class StageManager {
             .auth()
             .getUser(decodedIdToken.uid);
 
-        this.createStage(stageId);
+        const stage = this.createStage(stageId);
 
         await this.joinStageAndInitializeAllServices(socket, stageId, user);
 
-        return stageId;
+        return {
+            stage: {
+                ...docRef,
+                id: stageId,
+            },
+            participants: stage.getMinimalParticipants(),
+            msProducers: stage.getMsProducers(),
+        };
     }
 
     public async handleStageJoin(socket: SocketIO.Socket, data: StageJoinPayload) {
