@@ -94,7 +94,7 @@ interface StageJoinPayload {
     password: string;
 }
 ```
-* c>s>c `stg/participants`
+* c>s>c | s>* `stg/participants/state`
 ```typescript
 // server payload
 interface StageParticipantAnnouncement {
@@ -103,7 +103,16 @@ interface StageParticipantAnnouncement {
     socketId: string;
 }[]
 ```
-* s>* `stg/participant-added`
+* s>* `stg/participant/added`
+```typescript
+// server payload
+interface StageParticipantAnnouncement {
+    userId: string;
+    name: string;
+    socketId: string;
+}
+```
+* s>* `stg/participant/removed`
 ```typescript
 // server payload
 interface StageParticipantAnnouncement {
@@ -149,18 +158,25 @@ interface ServerIpPayload {
 * c>s>c `stg/ms/consume`
 * c>s>c `stg/ms/finish-consume`
 
-* s>* `stg/ms/producer/update`
+* s>* `stg/ms/producer/added`
 ```typescript
 interface MediasoupProducerAnnouncement {
     userId: string;
-    producer: Producer[];
+    producer: string[]; // producer ids
 }
 ```
-* c>s>c `stg/ms/producer/all`
+* s>* `stg/ms/producer/removed`
+```typescript
+interface MediasoupProducerAnnouncement {
+    userId: string;
+    producer: string[]; // producer ids
+}
+```
+* c>s>c `stg/ms/producers/state`
 ```typescript
 // Server response
 interface MediasoupProducerAnnouncement {
     userId: string;
-    producer: Producer[];
+    producer: string[]; // producer ids
 }[]
 ```
