@@ -162,6 +162,17 @@ export class Mediasoup implements OnInit {
             });
             producer.on("transportclose", () => {
                 this.logger.info("producer's transport closed", producer.id);
+                
+                this.events.next({
+                    action: "ms/producer/removed",
+                    stageId: stageId,
+                    sender: socket,
+                    payload: {
+                        userId: user.uid,
+                        producer: producer.id
+                    }
+                });
+
                 //closeProducer(producer); ??
             });
 
@@ -182,7 +193,7 @@ export class Mediasoup implements OnInit {
                 stageId: stageId,
                 sender: socket,
                 payload: {
-                    producer,
+                    producer: producer.id,
                     userId: user.uid,
                 }
             });
