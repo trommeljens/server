@@ -44,7 +44,7 @@ export class StageManager {
         socket: SocketIO.Socket,
         stageId: string,
         user: firebase.auth.UserRecord
-    ) {
+    ): Promise<Stage> {
         socket.join(stageId);
 
         const [_, mediasoupClient] = await Promise.all([
@@ -89,8 +89,10 @@ export class StageManager {
         socket.on('disconnect', () => {
             stage.removeParticipant(participant);
         });
-    }
 
+        return stage;
+    }
+    
     public async handleStageCreate(socket: SocketIO.Socket, data: StageCreatePayload) {
         this.logger.info("create-stage()");
         const decodedIdToken = await this.firebase.admin
@@ -141,14 +143,16 @@ export class StageManager {
                     .auth()
                     .getUser(decodedIdToken.uid);
 
-                await this.joinStageAndInitializeAllServices(socket, data.stageId, user);
+                const stage = await this.joinStageAndInitializeAllServices(socket, data.stageId, user);
                 this.logger.info(`user ${user.uid} joined stage ${data.stageId}`);
 
                 return {
                     stage: {
                         ...docData,
-                        id: data.stageId
-                    }
+                        id: data.stageId,
+                    },
+                    participants: stage.getMinimalParticipants(),
+                    msProducers: stage.getMsProducers(),
                 };
             } else {
                 this.logger.warn(`user entered wrong password`);
