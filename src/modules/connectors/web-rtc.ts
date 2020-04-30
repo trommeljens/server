@@ -2,21 +2,14 @@ import { Injectable, OnInit } from "@hacker-und-koch/di";
 import { Logger } from "@hacker-und-koch/logger";
 
 import * as firebase from 'firebase-admin';
-import { Subject } from "rxjs";
-
-import { BusEvent } from './events';
 
 export declare type WebRtcAction
     = 'p2p/peer-added';
-
-export declare interface WebRtcEvent<T> extends BusEvent<WebRtcAction, T> { }
 
 @Injectable()
 export class WebRTC implements OnInit {
 
     constructor(private logger: Logger) { }
-
-    public events: Subject<WebRtcEvent<any>> = new Subject();
 
     async onInit() {
         this.logger.log("Initialized WebRTC");
@@ -29,15 +22,15 @@ export class WebRTC implements OnInit {
         //     socketId: socket.id
         // });
 
-        this.events.next({
-            action: 'p2p/peer-added',
-            stageId: stage,
-            sender: socket,
-            payload: {
-                uid: user.uid,
-                socketId: socket.id
-            }
-        });
+        // this.events.next({
+        //     action: 'p2p/peer-added',
+        //     stageId: stage,
+        //     sender: socket,
+        //     payload: {
+        //         uid: user.uid,
+        //         socketId: socket.id
+        //     }
+        // });
 
         socket.on("stg/p2p/make-offer", (data: {
             uid: string;

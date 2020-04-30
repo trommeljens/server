@@ -1,8 +1,8 @@
 import * as firebase from 'firebase-admin';
 import { Subject } from 'rxjs';
 
-import { Events, BusEvent } from './events';
-import { MediasoupClient } from './mediasoup';
+// import { Events, BusEvent } from './events';
+import { MediasoupClient } from '../connectors';
 
 export interface StageParticipant {
     user: firebase.auth.UserRecord;
@@ -26,13 +26,9 @@ export declare type StageAction
     | 'ms/producers/state';
 
 
-export declare interface StageEvent<T> extends BusEvent<StageAction, T> { }
-
 export class Stage {
 
     private participants: StageParticipant[] = [];
-
-    public events: Subject<BusEvent<string, any>> = new Subject();
 
     constructor() {
 
@@ -41,16 +37,16 @@ export class Stage {
     public addParticipant(participant: StageParticipant) {
         participant.socket.join(participant.stageId);
 
-        this.events.next({
-            action: 'participant/added',
-            sender: participant.socket,
-            stageId: participant.stageId,
-            payload: {
-                userId: participant.user.uid,
-                name: participant.user.displayName,
-                socketId: participant.socket.id,
-            }
-        });
+        // this.events.next({
+        //     action: 'participant/added',
+        //     sender: participant.socket,
+        //     stageId: participant.stageId,
+        //     payload: {
+        //         userId: participant.user.uid,
+        //         name: participant.user.displayName,
+        //         socketId: participant.socket.id,
+        //     }
+        // });
 
         this.participants.push(participant);
     }
@@ -62,16 +58,16 @@ export class Stage {
             .reverse()
             .forEach(i => this.participants.splice(i, 1));
         
-        this.events.next({
-            action: 'participant/removed',
-            sender: participant.socket,
-            stageId: participant.stageId,
-            payload: {
-                userId: participant.user.uid,
-                name: participant.user.displayName,
-                socketId: participant.socket.id,
-            }
-        });
+        // this.events.next({
+        //     action: 'participant/removed',
+        //     sender: participant.socket,
+        //     stageId: participant.stageId,
+        //     payload: {
+        //         userId: participant.user.uid,
+        //         name: participant.user.displayName,
+        //         socketId: participant.socket.id,
+        //     }
+        // });
     }
 
     getMinimalParticipants(blacklistSocketId?: string): StageParticipantAnnouncement[] {

@@ -1,6 +1,6 @@
 import { Injectable, OnInit } from "@hacker-und-koch/di";
 import { Logger } from "@hacker-und-koch/logger";
-import { Events } from "./events";
+import { Events } from "../socket-handlers/events";
 
 export interface ClientIpPayload {
     ip: string;

@@ -11,8 +11,6 @@ import { RtpCapabilities } from "mediasoup/lib/RtpParameters";
 import { DtlsParameters } from "mediasoup/src/WebRtcTransport";
 import { MediaKind, RtpParameters } from "mediasoup/src/RtpParameters";
 import { BehaviorSubject, Subject } from "rxjs";
-import { Events } from "./events";
-import { StageEvent } from "./stage";
 
 export interface MediasoupProducerResponse {
     userId: string;
@@ -39,8 +37,6 @@ export class Mediasoup implements OnInit {
     private router: {
         [id: string]: Router
     } = {};
-
-    public events: Subject<StageEvent<any>> = new Subject();
 
     constructor(private logger: Logger) {
 
@@ -163,40 +159,40 @@ export class Mediasoup implements OnInit {
             producer.on("transportclose", () => {
                 this.logger.info("producer's transport closed", producer.id);
                 
-                this.events.next({
-                    action: "ms/producer/removed",
-                    stageId: stageId,
-                    sender: socket,
-                    payload: {
-                        userId: user.uid,
-                        producer: producer.id
-                    }
-                });
+                // this.events.next({
+                //     action: "ms/producer/removed",
+                //     stageId: stageId,
+                //     sender: socket,
+                //     payload: {
+                //         userId: user.uid,
+                //         producer: producer.id
+                //     }
+                // });
 
                 //closeProducer(producer); ??
             });
 
             client.producer.push(producer);
 
-            this.events.next({
-                action: "ms/producers/state",
-                stageId: stageId,
-                sender: socket,
-                payload: {
-                    userId: user.uid,
-                    producer: client.producer.map(p => p.id)
-                }
-            });
+            // this.events.next({
+            //     action: "ms/producers/state",
+            //     stageId: stageId,
+            //     sender: socket,
+            //     payload: {
+            //         userId: user.uid,
+            //         producer: client.producer.map(p => p.id)
+            //     }
+            // });
 
-            this.events.next({
-                action: "ms/producer/added",
-                stageId: stageId,
-                sender: socket,
-                payload: {
-                    producer: producer.id,
-                    userId: user.uid,
-                }
-            });
+            // this.events.next({
+            //     action: "ms/producer/added",
+            //     stageId: stageId,
+            //     sender: socket,
+            //     payload: {
+            //         producer: producer.id,
+            //         userId: user.uid,
+            //     }
+            // });
 
             callback({ id: producer.id });
         });

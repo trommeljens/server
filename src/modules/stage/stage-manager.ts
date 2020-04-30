@@ -2,12 +2,10 @@ import { Injectable, OnInit } from "@hacker-und-koch/di";
 import { Logger } from "@hacker-und-koch/logger";
 import * as firebase from 'firebase-admin';
 
-import { Mediasoup, MediasoupProducerResponse } from "./mediasoup";
-import { WebRTC } from "./web-rtc";
-import { Soundjack } from "./soundjack";
+import { WebRTC, Soundjack, Mediasoup, MediasoupProducerResponse } from "../connectors";
 import { Firebase } from "../firebase";
 import { Stage, StageParticipantAnnouncement } from "./stage";
-import { Events } from "./events";
+import { Events } from "../socket-handlers/events";
 
 export interface StageCreatePayload {
     token: string;
@@ -36,10 +34,7 @@ export class StageManager {
     ) { }
 
     onConfigure() {
-        this.mediasoup.events
-            .subscribe(event => this.stages[event.stageId].events.next(event));
-        this.webRtc.events
-            .subscribe(event => this.stages[event.stageId].events.next(event));
+
     }
 
     public async joinStageAndInitializeAllServices(
@@ -60,23 +55,23 @@ export class StageManager {
             this.mediasoup.connectSocketToStage(socket, stageId, user),
             this.soundjack.connectSocketToStage(socket, stageId, user.uid),
         ]);
-        
+
         const participant = {
             user,
             socket,
             stageId,
             mediasoupClient,
         };
-        
+
         this.logger.info(`adding participant ${user.uid} to stage ${stageId}`);
         stage.addParticipant(participant);
 
         this.logger.info(`stage ${stageId} has now ${stage.getParticipants().length} participants.`)
-        
+
         socket.on(Events.stage.participants.state, (_, callback) => {
             callback(stage.getMinimalParticipants(socket.id));
         });
-        
+
         socket.on(Events.stage.mediasoup.producers.state, async ({ }, callback) => {
             const response: MediasoupProducerResponse[] = stage.getMsProducers();
             callback(response);
@@ -112,6 +107,8 @@ export class StageManager {
         const user = await this.firebase.admin
             .auth()
             .getUser(decodedIdToken.uid);
+
+        
 
         const stage = this.createStage(stageId);
 
@@ -171,13 +168,13 @@ export class StageManager {
     private createStage(stageId: string): Stage {
         const stage = new Stage();
 
-        stage.events
-            .subscribe(event =>
-                event.sender
-                    .broadcast
-                    .to(event.stageId)
-                    .emit(`stg/${event.action}`, event.payload)
-            );
+        // stage.events
+        //     .subscribe(event =>
+        //         event.sender
+        //             .broadcast
+        //             .to(event.stageId)
+        //             .emit(`stg/${event.action}`, event.payload)
+        //     );
 
         this.stages[stageId] = stage;
         return stage;
