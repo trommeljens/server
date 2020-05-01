@@ -17,7 +17,7 @@ export interface StageParticipantAnnouncement {
     socketId: string;
 }
 
-export declare type StageAction 
+export declare type StageAction
     = 'participant/added'
     | 'participant/removed'
     | 'participants/state'
@@ -57,7 +57,7 @@ export class Stage {
             .filter(x => x !== null)
             .reverse()
             .forEach(i => this.participants.splice(i, 1));
-        
+
         // this.events.next({
         //     action: 'participant/removed',
         //     sender: participant.socket,
@@ -91,9 +91,10 @@ export class Stage {
         return this.getParticipants(blacklistSocketId)
             .map(p => ({
                 userId: p.user.uid,
-                producer: p.mediasoupClient
-                    .producer
-                    .map(p => p.id),
+                producer: Object.keys(
+                    p.mediasoupClient
+                        .producer
+                ),
             }));
     }
 }

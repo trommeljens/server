@@ -41,11 +41,11 @@ export class Firebase implements OnInit {
     }
 
     async onReady() {
-        setInterval(() => {
-            this.admin.firestore().collection('stages')
-                .doc('W4kiyue8wRaZiRErZmv1')
-                .update({ 'name': new Date(Date.now()).toISOString() })
-        }, 2e3);
+        // setInterval(() => {
+        //     this.admin.firestore().collection('stages')
+        //         .doc('W4kiyue8wRaZiRErZmv1')
+        //         .update({ 'name': new Date(Date.now()).toISOString() })
+        // }, 2e3);
     }
 
     newEntity(collection: string, initialState: any) {

@@ -2,19 +2,23 @@ import { Application, OnReady } from '@hacker-und-koch/di';
 import { Logger } from '@hacker-und-koch/logger';
 
 import {
-    // HttpServer,
+    HttpServer,
     Firebase,
+    SocketHandler,
+    SessionManager,
 } from './modules';
 
 @Application({
     declarations: [
         Firebase,
-        // HttpServer,
+        HttpServer,
+        SocketHandler,
+        SessionManager,
     ],
 })
 export class App implements OnReady {
     constructor(
-        // private server: HttpServer, // required force creation of an instance
+        private server: HttpServer, // required force creation of an instance
         private firebase: Firebase,
         private logger: Logger
     ) {
